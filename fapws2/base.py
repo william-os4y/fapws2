@@ -4,6 +4,7 @@ except ImportError:
     import StringIO
 import log
 import utils
+import _evhttp as evhttp
 
 status_reasons = {
     100: 'Continue',
@@ -66,24 +67,8 @@ class Environ:
         #self.env['wsgi.multithread'] = False
         self.env['wsgi.multiprocess'] = True
         self.env['wsgi.run_once'] = False
-        print "RESET"
     def update(self, data):
-        #self.env.update(data)
-        pass
-    def parse_uri(self, uri):
-        print "URI", uri
-        #url, self.env['SERVER_PROTOCOL'] = utils.fsplit(firstline,None,3)
-        #self.env['REQUEST_METHOD'] = request.upper()
-        self.env['SCRIPT_NAME'] = ''
-        #self.env['PATH_INFO'] = ''
-        # Allow the WSGI app to move the mount point into SCRIPT_NAME as is
-        # done by ContentHandler
-        if "?" in uri:
-            self.env['PATH_INFO'],self.env['QUERY_STRING'] = utils.fsplit(uri,'?',2)
-        else:
-            self.env['PATH_INFO'] = uri
-            self.env['QUERY_STRING'] = ""
-        #self.env['wsgi.url_scheme'] = utils.fsplit(self.env['SERVER_PROTOCOL'],'/')[0]
+        self.env.update(data)
 
 #the following name can not change
 environ=Environ()
@@ -94,3 +79,4 @@ class Start_response:
 
 #The following name can not change
 start_response=Start_response()
+
