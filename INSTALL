@@ -1,0 +1,10 @@
+
+Pre-requisit:
+
+- You must have source of libevent (binary packages will not work)
+- You must compile and install it (./configure; make; make insall)
+
+Install:
+- execute: python setup.py install
+
+

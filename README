@@ -1,0 +1,18 @@
+Fast Asynchronous Python Web Server (fapws is short)
+====================================================
+
+This is a python web server using the wonderfull libevent library. Thus this is yet an another asynchronous web server like Medusa, Twisted, Apricot.
+And fapws is a WSGI compliant web server.
+
+Why a new python web server ?
+-----------------------------
+In that case, the usual question is why an new one ? In short, the answer is because the owner of Apricot does not answer to my mails, and because Medusa and Twisted can not go as fast as Apricot. Indeed, after several pure performance tests it appears that thanks to the libevent library Apricot is the fastest python web server.
+
+But that not the only reason. Personnally, I prefer event's web server. Indeed, such architecture gives more performant web server and with a much more limited memory foot print. You can easly install them a memory limited machines (like VDS for example).
+
+Philosophy:
+-----------
+fapws must stay the most simple web server and the fastest. Thus the core of the application is quite limited. Every additional feature will be placed inside a contrib directory. This is valontary for disk space "foot print" reasons. Thus fapws must also facilitate the disk utilisation.
+
+How to use fapws ?
+------------------
