@@ -87,6 +87,10 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
 
 struct evhttp* http_server;
 PyObject *base_module;
+struct cb_params {
+    char *url_path;
+    PyObject *pycbobj;
+};
 
 static PyObject *
 from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
@@ -109,7 +113,7 @@ from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
 }
 
 static PyObject *
-build_request_variables(struct evhttp_request *req)
+build_request_variables(struct evhttp_request *req, char *url_path)
 {
     PyObject* dict = PyDict_New();
     PyObject *method=NULL;
@@ -127,6 +131,7 @@ build_request_variables(struct evhttp_request *req)
     
     /* Clean up the uri */
     full_uri = strdup(req->uri);
+    PyDict_SetItemString(dict, "SCRIPT_NAME", PyString_FromString(url_path));
     if (strchr(full_uri, '?') == NULL) {
         PyDict_SetItemString(dict, "PATH_INFO", PyString_FromString(full_uri));
         PyDict_SetItemString(dict, "QUERY_STRING", PyString_FromString(""));    
@@ -193,8 +198,8 @@ python_handler( struct evhttp_request *req, void *arg)
 {
     struct evbuffer *evb=evbuffer_new();
     PyObject *headers_dict, *request_dict;
-    
-    PyObject *pycbobj=(PyObject *)arg;
+ 
+    struct cb_params *params=(struct cb_params*)arg;
     //build environ
     PyObject *environ=PyObject_GetAttrString(base_module, "environ");
     reset_environ(environ);
@@ -203,14 +208,14 @@ python_handler( struct evhttp_request *req, void *arg)
     // This just adds some variables that are needed
     // from parsing the uri
     
-    request_dict = build_request_variables(req);
+    request_dict = build_request_variables(req, params->url_path);
     update_environ(environ, request_dict);
-    
+
     //build start_response
     PyObject *start_response=PyObject_GetAttrString(base_module, "start_response");
     //execute python callbacks with his parameters
     PyObject *arglist = Py_BuildValue("(OO)", environ, start_response );
-    PyObject *result = PyEval_CallObject(pycbobj,arglist);
+    PyObject *result = PyEval_CallObject(params->pycbobj,arglist);
     if (!PyString_Check(result)) {
           PyErr_SetString(PyExc_TypeError, "Result must be a string");
           //return NULL;
@@ -241,6 +246,7 @@ py_evhttp_cb(PyObject *self, PyObject *args)
 {
     PyObject *pycbobj;
     char *path;
+    struct cb_params *params;
 
     if (!PyArg_ParseTuple(args, "sO", &path, &pycbobj)) 
         return NULL;
@@ -248,8 +254,11 @@ py_evhttp_cb(PyObject *self, PyObject *args)
         PyErr_SetString(PyExc_TypeError, "Need a callable object!");
         return NULL;
     }
+    params=calloc(1,sizeof(struct cb_params));
+    params->url_path=strdup(path);
+    params->pycbobj=pycbobj;
     //check path is not null
-    evhttp_set_cb(http_server, path, python_handler, pycbobj);
+    evhttp_set_cb(http_server, path, python_handler, params);
     return Py_None;
 }
 
@@ -257,6 +266,7 @@ static PyObject *
 py_genhttp_cb(PyObject *self, PyObject *args)
 {
     PyObject *pycbobj;
+    struct cb_params *params;
 
     if (!PyArg_ParseTuple(args, "O", &pycbobj)) 
         return NULL;
@@ -264,7 +274,10 @@ py_genhttp_cb(PyObject *self, PyObject *args)
         PyErr_SetString(PyExc_TypeError, "Need a callable object!");
         return NULL;
     }
-    evhttp_set_gencb(http_server, python_handler, pycbobj);
+    params=calloc(1,sizeof(struct cb_params));
+    params->url_path="";
+    params->pycbobj=pycbobj;
+    evhttp_set_gencb(http_server, python_handler, params);
     return Py_None;
 }
 

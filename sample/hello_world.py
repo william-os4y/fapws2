@@ -16,7 +16,7 @@ def generic(environ, start_response):
     return "Page not found"
 
 def test(environ, start_response):
-    #print "Header", environ.env
+    print "Header", environ.env
     return "Hello World!!"
 
 evhttp.http_cb("/test",test)

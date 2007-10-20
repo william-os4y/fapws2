@@ -19,6 +19,7 @@ setup (name = "fapws2",
 	       include_dirs=['/var/abs/local/libevent/src/libevent-1.3e'],
 	       library_dirs=['/var/abs/local/libevent/src/libevent-1.3e'],
 	       libraries=['event'],
+           extra_compile_args=["-g"],
 	       )
 	       ]
 )
