@@ -61,12 +61,13 @@ class Environ:
         self.env={}
     def reset(self):
         self.env={}
-        #self.env['wsgi.version'] = (1,0)
+        self.env['wsgi.version'] = (1,0)
         #self.env['wgsi.errors'] = log.error_logfid
         #self.env['wsgi.input'] = StringIO.StringIO('')
-        #self.env['wsgi.multithread'] = False
+        self.env['wsgi.multithread'] = False
         self.env['wsgi.multiprocess'] = True
         self.env['wsgi.run_once'] = False
+        self.env['wsgi.url_scheme']="http"   #TODO:  support of https
     def update(self, data):
         self.env.update(data)
 

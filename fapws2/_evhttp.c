@@ -91,6 +91,8 @@ struct cb_params {
     char *url_path;
     PyObject *pycbobj;
 };
+char *server_name=NULL;
+short server_port;
 
 static PyObject *
 from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
@@ -98,7 +100,6 @@ from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
     struct evkeyval *header;
     PyObject* dict = PyDict_New();
     PyObject *val;
-    //char *key_head="http_";
     
     TAILQ_FOREACH(header, headers, next) {
         char *key;
@@ -117,10 +118,15 @@ build_request_variables(struct evhttp_request *req, char *url_path)
 {
     PyObject* dict = PyDict_New();
     PyObject *method=NULL;
-    char *full_uri, *path_info, *query_string;
+    char *rst_uri, *path_info, *query_string;
     struct evkeyvalq *uri_params;
     PyObject *query_dict=PyDict_New();
+    int len=0;
     
+
+    PyDict_SetItemString(dict, "SERVER_NAME", PyString_FromString(server_name));
+    PyDict_SetItemString(dict, "SERVER_PORT", Py_BuildValue("h", server_port));
+
     switch( req->type )
     {
         case EVHTTP_REQ_POST: method = PyString_FromString("POST");
@@ -130,16 +136,20 @@ build_request_variables(struct evhttp_request *req, char *url_path)
     PyDict_SetItemString(dict, "REQUEST_METHOD", method);
     
     /* Clean up the uri */
-    full_uri = strdup(req->uri);
+    len=strlen(req->uri)-strlen(url_path)+1;
+    rst_uri = calloc(len, sizeof(char));
+    strncpy(rst_uri, req->uri + strlen(url_path), len);
+    printf("URI:%s  %s\n",url_path, rst_uri);
     PyDict_SetItemString(dict, "SCRIPT_NAME", PyString_FromString(url_path));
-    if (strchr(full_uri, '?') == NULL) {
-        PyDict_SetItemString(dict, "PATH_INFO", PyString_FromString(full_uri));
+    
+    if (strchr(rst_uri, '?') == NULL) {
+        PyDict_SetItemString(dict, "PATH_INFO", PyString_FromString(rst_uri));
         PyDict_SetItemString(dict, "QUERY_STRING", PyString_FromString(""));    
         PyDict_SetItemString(dict,"QUERY_DICT",query_dict);
     }
     else {
         // TODO Fix path info so it doesn't there is no query info
-        query_string=strdup(full_uri);
+        query_string=strdup(rst_uri);
         path_info=strsep(&query_string,"?");
         PyDict_SetItemString(dict, "PATH_INFO", PyString_FromString(path_info));        
         PyDict_SetItemString(dict,"QUERY_STRING",PyString_FromString(query_string));
@@ -156,7 +166,7 @@ build_request_variables(struct evhttp_request *req, char *url_path)
 static PyObject *
 build_environ(const struct evkeyvalq *headers)
 {
-    return from_queue_to_dict(headers, "http_");
+    return from_queue_to_dict(headers, "HTTP_");
 }
 
 static PyObject *
@@ -231,13 +241,11 @@ python_handler( struct evhttp_request *req, void *arg)
 static PyObject *
 py_evhttp_start(PyObject *self, PyObject *args)
 {
-    const char *address;
-    short port;
 
-    if (!PyArg_ParseTuple(args, "si", &address, &port))
+    if (!PyArg_ParseTuple(args, "si", &server_name, &server_port))
         return NULL;
-    printf("start at: %s, %i\n",address, port);
-    http_server=evhttp_start( address, port);
+    printf("start at: %s, %i\n",server_name, server_port);
+    http_server=evhttp_start( server_name, server_port);
     return Py_None;
 }
 
