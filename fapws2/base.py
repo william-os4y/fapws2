@@ -1,10 +1,16 @@
+
+import datetime
+from Cookie import SimpleCookie, CookieError
 try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
-import log
-import utils
+from fapws2 import log
+from fapws2 import utils
 import _evhttp as evhttp
+
+
+SERVER_IDENT = "fapws2/0.1"
 
 status_reasons = {
     100: 'Continue',
@@ -71,13 +77,63 @@ class Environ:
     def update(self, data):
         self.env.update(data)
 
-#the following name can not change
-environ=Environ()
 
 class Start_response:
     def __init__(self):
-        self.data="toto"
+        self.status_code = "200"
+        self.status_reasons = "OK"
+        self.response_headers = {}
+        self.exc_info = None
+        self.cookies = SimpleCookie()
+        # NEW -- sent records whether or not the headers have been send to the
+        # client
+        self.sent= False
 
-#The following name can not change
-start_response=Start_response()
+    def __call__(self, status, response_headers, exc_info=None):
+        self.status_code, self.status_reasons = status.split()
+        self.status_code=str(self.status_code)
+        for key,val in response_headers:
+            #if type(key)!=type(""):
+            key=str(key)
+            #if type(val)!=type(""):
+            val=str(val)
+            self.response_headers[key] = val
+        self.exc_info = exc_info #TODO: to implement
+    def set_cookie(self, key, value='', max_age=None, expires=None, path='/', domain=None, secure=None):
+        self.cookies[key] = value
+        self.response_headers['Set-Cookie'] = self.cookies
+        if max_age:
+            self.cookies[key]['max-age'] = max_age
+        if expires:
+            if isinstance(expires, str):
+                self.cookies[key]['expires'] = expires
+            elif isinstance(expires, datetime.datetime):
+                expires = expires.strftime('%a, %d %b %Y %H:%M:%S GMT')
+            else:
+                raise CookieError, 'expires must be a datetime object or a string'
+            self.cookies[key]['expires'] = expires
+        if path:
+            self.cookies[key]['path'] = path
+        if domain:
+            self.cookies[key]['domain'] = domain
+        if secure:
+            self.cookies[key]['secure'] = secure
+    def delete_cookie(self, key):
+        if self.cookies:
+            self.cookies[key] = ''
+        self.cookies[key]['max-age'] = "0"
+    def __str__(self):
+        self.response_headers['Date'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        self.response_headers['Server'] = SERVER_IDENT
+        #res = "HTTP/1.1 %s %s\r\n" % (self.status_code, self.status_reasons)
+        res=""
+        for key, val in self.response_headers.items():
+            if key.upper() == "SET-COOKIE":
+                res += "%s\r\n" % val
+            else:
+                res += '%s: %s\r\n' % (key,val)
+        res += "\r\n"
+        return res
+        
+
 

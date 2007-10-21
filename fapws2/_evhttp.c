@@ -139,7 +139,6 @@ build_request_variables(struct evhttp_request *req, char *url_path)
     len=strlen(req->uri)-strlen(url_path)+1;
     rst_uri = calloc(len, sizeof(char));
     strncpy(rst_uri, req->uri + strlen(url_path), len);
-    printf("URI:%s  %s\n",url_path, rst_uri);
     PyDict_SetItemString(dict, "SCRIPT_NAME", PyString_FromString(url_path));
     
     if (strchr(rst_uri, '?') == NULL) {
@@ -158,7 +157,6 @@ build_request_variables(struct evhttp_request *req, char *url_path)
         PyDict_SetItemString(dict,"QUERY_DICT",query_dict);
         
     }
-    //printf("path inf %s\n\n", path_info);
     return dict;
 }
 
@@ -211,7 +209,8 @@ python_handler( struct evhttp_request *req, void *arg)
  
     struct cb_params *params=(struct cb_params*)arg;
     //build environ
-    PyObject *environ=PyObject_GetAttrString(base_module, "environ");
+    PyObject *environ_class=PyObject_GetAttrString(base_module, "Environ");
+    PyObject *environ=PyInstance_New(environ_class, NULL, NULL);
     reset_environ(environ);
     headers_dict=build_environ(req->input_headers);
     update_environ(environ, headers_dict);
@@ -222,19 +221,40 @@ python_handler( struct evhttp_request *req, void *arg)
     update_environ(environ, request_dict);
 
     //build start_response
-    PyObject *start_response=PyObject_GetAttrString(base_module, "start_response");
+    PyObject *start_response_class=PyObject_GetAttrString(base_module, "Start_response");
+    PyObject *start_response=PyInstance_New(start_response_class, NULL, NULL);
     //execute python callbacks with his parameters
     PyObject *arglist = Py_BuildValue("(OO)", environ, start_response );
     PyObject *result = PyEval_CallObject(params->pycbobj,arglist);
     if (!PyString_Check(result)) {
           PyErr_SetString(PyExc_TypeError, "Result must be a string");
-          //return NULL;
+          //return NUL;
     }
+    //get status_code and reason
+    //set headers
+    PyObject *response_headers_dict=PyObject_GetAttrString(start_response, "response_headers");
+    PyObject *key, *value;
+    int pos = 0;
+    //printf("Check:%s\n", req->uri);
+    if (PyDict_Check(response_headers_dict)) {
+        while (PyDict_Next(response_headers_dict, &pos, &key, &value)) {
+            evhttp_add_header(req->output_headers, PyString_AsString(key), PyString_AsString(value));
+            //printf("ADD HEADER:%s=%s\n", PyString_AsString(key), PyString_AsString(value));
+        }
+    }
+
     char *res=PyString_AsString(result);
     evbuffer_add_printf(evb, res);
     //printf("Request from %s:", req->remote_host);
     //TODO get start_response data
-    evhttp_send_reply(req, HTTP_OK, "OK", evb);
+    PyObject *py_status_code=PyObject_GetAttrString(start_response,"status_code");
+    int status_code;
+    char *status_code_str=PyString_AsString(py_status_code);
+    status_code=atoi(status_code_str);
+
+    PyObject *py_status_reasons=PyObject_GetAttrString(start_response,"status_reasons");
+    char *status_reasons=PyString_AsString(py_status_reasons);
+    evhttp_send_reply(req, status_code, status_reasons, evb);
     evbuffer_free(evb);
 }
 

@@ -16,7 +16,8 @@ def generic(environ, start_response):
     return "Page not found"
 
 def test(environ, start_response):
-    print "Header", environ.env
+    #print "Header", environ.env
+    start_response('200 WHYNOT', [('toto',4444)])
     return "Hello World!!"
 
 evhttp.http_cb("/test",test)
