@@ -17,6 +17,7 @@ def generic(environ, start_response):
 
 def test(environ, start_response):
     #print "Header", environ.env
+    #print environ.env['QUERY_DICT']
     start_response('200 WHYNOT', [('toto',4444)])
     return "Hello World!!"
 

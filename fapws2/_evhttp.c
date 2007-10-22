@@ -108,6 +108,8 @@ py_from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
         strcat(key,header->key);
         pyval = Py_BuildValue("s", header->value );
         PyDict_SetItemString(pydict, key, pyval);
+        Py_DECREF(pyval);
+        free(key);
     }
     return pydict;
 }
@@ -132,7 +134,8 @@ py_build_request_variables(struct evhttp_request *req, char *url_path)
         case EVHTTP_REQ_GET: pymethod = PyString_FromString("GET");
     }
     PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
-    
+    Py_DECREF(pymethod);
+
     /* Clean up the uri */
     len=strlen(req->uri)-strlen(url_path)+1;
     rst_uri = calloc(len, sizeof(char));
@@ -155,6 +158,8 @@ py_build_request_variables(struct evhttp_request *req, char *url_path)
         PyDict_SetItemString(pydict,"QUERY_DICT",pyquery_dict);
         
     }
+    free(rst_uri);
+    Py_DECREF(pyquery_dict);
     return pydict;
 }
 
@@ -178,6 +183,7 @@ reset_environ(PyObject *pyenviron)
 {
     PyObject *pyreset=PyObject_GetAttrString(pyenviron, "reset");
     PyObject_CallFunction(pyreset, NULL);
+    Py_DECREF(pyreset);
 }
 
 void 
@@ -185,6 +191,7 @@ update_environ(PyObject *pyenviron, PyObject *pydict)
 {
     PyObject *pyupdate=PyObject_GetAttrString(pyenviron, "update");
     PyObject_CallFunction(pyupdate, "(O)", pydict);
+    Py_DECREF(pyupdate);
 }
 
 
@@ -209,21 +216,26 @@ python_handler( struct evhttp_request *req, void *arg)
     //build environ
     PyObject *pyenviron_class=PyObject_GetAttrString(py_base_module, "Environ");
     PyObject *pyenviron=PyInstance_New(pyenviron_class, NULL, NULL);
+    Py_DECREF(pyenviron_class);
     reset_environ(pyenviron);
     pyheaders_dict=py_build_environ(req->input_headers);
     update_environ(pyenviron, pyheaders_dict);
+    Py_DECREF(pyheaders_dict);
     // This just adds some variables that are needed
     // from parsing the uri
     
     pyrequest_dict = py_build_request_variables(req, params->url_path);
     update_environ(pyenviron, pyrequest_dict);
+    Py_DECREF(pyrequest_dict);
 
     //build start_response
     PyObject *pystart_response_class=PyObject_GetAttrString(py_base_module, "Start_response");
     PyObject *pystart_response=PyInstance_New(pystart_response_class, NULL, NULL);
+    Py_DECREF(pystart_response_class);
     //execute python callbacks with his parameters
     PyObject *pyarglist = Py_BuildValue("(OO)", pyenviron, pystart_response );
     PyObject *pyresult = PyEval_CallObject(params->pycbobj,pyarglist);
+    Py_DECREF(pyarglist);
     if (!PyString_Check(pyresult)) {
           PyErr_SetString(PyExc_TypeError, "Result must be a string");
           //return NUL;
@@ -239,19 +251,26 @@ python_handler( struct evhttp_request *req, void *arg)
             evhttp_add_header(req->output_headers, PyString_AsString(pykey), PyString_AsString(pyvalue));
             //printf("ADD HEADER:%s=%s\n", PyString_AsString(pykey), PyString_AsString(pyvalue));
         }
+       //when uncomment server crash. why ?
+       //Py_DECREF(pykey);
+       //Py_DECREF(pyvalue);
     }
-
+    Py_DECREF(pyresponse_headers_dict);
     char *res=PyString_AsString(pyresult);
+    Py_DECREF(pyresult);
     evbuffer_add_printf(evb, res);
     //printf("Request from %s:", req->remote_host);
     //get start_response data
     PyObject *pystatus_code=PyObject_GetAttrString(pystart_response,"status_code");
     int status_code;
     char *status_code_str=PyString_AsString(pystatus_code);
+    Py_DECREF(pystatus_code);
     status_code=atoi(status_code_str);
 
     PyObject *pystatus_reasons=PyObject_GetAttrString(pystart_response,"status_reasons");
     char *status_reasons=PyString_AsString(pystatus_reasons);
+    Py_DECREF(pystatus_reasons);
+    Py_DECREF(pystart_response);
     evhttp_send_reply(req, status_code, status_reasons, evb);
     evbuffer_free(evb);
 }
@@ -311,6 +330,7 @@ static PyObject *
 py_evhttp_free(PyObject *self, PyObject *args)
 {
     evhttp_free(http_server);
+    Py_DECREF(py_base_module);
     return Py_None;
 }
 
