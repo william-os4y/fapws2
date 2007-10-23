@@ -111,6 +111,7 @@ py_from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
         Py_DECREF(pyval);
         free(key);
     }
+    free(header);
     return pydict;
 }
 
@@ -120,12 +121,16 @@ py_build_request_variables(struct evhttp_request *req, char *url_path)
     PyObject* pydict = PyDict_New();
     PyObject *pymethod=NULL;
     char *rst_uri, *path_info, *query_string;
-    struct evkeyvalq *uri_params;
+    struct evkeyvalq *uri_params=NULL;
     PyObject *pyquery_dict=PyDict_New();
     int len=0;
+    PyObject *pydummy;
 
-    PyDict_SetItemString(pydict, "SERVER_NAME", PyString_FromString(server_name));
-    PyDict_SetItemString(pydict, "SERVER_PORT", Py_BuildValue("h", server_port));
+    uri_params=calloc(1,sizeof(struct evkeyvalq));
+    pydummy=PyString_FromString(server_name);
+    PyDict_SetItemString(pydict, "SERVER_NAME", pydummy);
+    pydummy=Py_BuildValue("h", server_port);
+    PyDict_SetItemString(pydict, "SERVER_PORT", pydummy);
 
     switch( req->type )
     {
@@ -140,26 +145,33 @@ py_build_request_variables(struct evhttp_request *req, char *url_path)
     len=strlen(req->uri)-strlen(url_path)+1;
     rst_uri = calloc(len, sizeof(char));
     strncpy(rst_uri, req->uri + strlen(url_path), len);
-    PyDict_SetItemString(pydict, "SCRIPT_NAME", PyString_FromString(url_path));
+    pydummy=PyString_FromString(url_path);
+    PyDict_SetItemString(pydict, "SCRIPT_NAME", pydummy);
     
     if (strchr(rst_uri, '?') == NULL) {
-        PyDict_SetItemString(pydict, "PATH_INFO", PyString_FromString(rst_uri));
-        PyDict_SetItemString(pydict, "QUERY_STRING", PyString_FromString(""));    
+        pydummy=PyString_FromString(rst_uri);
+        PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
+        pydummy=PyString_FromString("");
+        PyDict_SetItemString(pydict, "QUERY_STRING", pydummy);    
         PyDict_SetItemString(pydict,"QUERY_DICT",pyquery_dict);
     }
     else {
         // TODO Fix path info so it doesn't there is no query info
         query_string=strdup(rst_uri);
         path_info=strsep(&query_string,"?");
-        PyDict_SetItemString(pydict, "PATH_INFO", PyString_FromString(path_info));        
-        PyDict_SetItemString(pydict,"QUERY_STRING",PyString_FromString(query_string));
+        pydummy=PyString_FromString(path_info);
+        PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
+        pydummy=PyString_FromString(path_info);        
+        PyDict_SetItemString(pydict,"QUERY_STRING",pydummy);
         evhttp_parse_query(req->uri, uri_params);
         pyquery_dict=py_from_queue_to_dict(uri_params,"");
         PyDict_SetItemString(pydict,"QUERY_DICT",pyquery_dict);
         
     }
+    free(uri_params);
     free(rst_uri);
     Py_DECREF(pyquery_dict);
+    Py_DECREF(pydummy);
     return pydict;
 }
 
@@ -272,7 +284,8 @@ python_handler( struct evhttp_request *req, void *arg)
     Py_DECREF(pystatus_reasons);
     Py_DECREF(pystart_response);
     evhttp_send_reply(req, status_code, status_reasons, evb);
-    evbuffer_free(evb);
+    evbuffer_free(evb);    
+    //free(params); generate a crash
 }
 
 static PyObject *
