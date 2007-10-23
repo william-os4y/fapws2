@@ -85,6 +85,10 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
 
 
 
+
+
+
+
 struct evhttp* http_server;
 PyObject *py_base_module;
 struct cb_params {
@@ -115,22 +119,21 @@ py_from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
     return pydict;
 }
 
-static PyObject *
-py_build_request_variables(struct evhttp_request *req, char *url_path)
+void
+py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *url_path)
 {
-    PyObject* pydict = PyDict_New();
+    //PyObject* pydict = PyDict_New();
     PyObject *pymethod=NULL;
     char *rst_uri, *path_info, *query_string;
-    struct evkeyvalq *uri_params=NULL;
-    PyObject *pyquery_dict=PyDict_New();
     int len=0;
     PyObject *pydummy;
 
-    uri_params=calloc(1,sizeof(struct evkeyvalq));
     pydummy=PyString_FromString(server_name);
     PyDict_SetItemString(pydict, "SERVER_NAME", pydummy);
+    Py_DECREF(pydummy);
     pydummy=Py_BuildValue("h", server_port);
     PyDict_SetItemString(pydict, "SERVER_PORT", pydummy);
+    Py_DECREF(pydummy);
 
     switch( req->type )
     {
@@ -141,38 +144,35 @@ py_build_request_variables(struct evhttp_request *req, char *url_path)
     PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
     Py_DECREF(pymethod);
 
-    /* Clean up the uri */
+    // Clean up the uri 
     len=strlen(req->uri)-strlen(url_path)+1;
     rst_uri = calloc(len, sizeof(char));
     strncpy(rst_uri, req->uri + strlen(url_path), len);
     pydummy=PyString_FromString(url_path);
     PyDict_SetItemString(pydict, "SCRIPT_NAME", pydummy);
-    
+    Py_DECREF(pydummy);
+  
     if (strchr(rst_uri, '?') == NULL) {
         pydummy=PyString_FromString(rst_uri);
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
+        Py_DECREF(pydummy);
         pydummy=PyString_FromString("");
         PyDict_SetItemString(pydict, "QUERY_STRING", pydummy);    
-        PyDict_SetItemString(pydict,"QUERY_DICT",pyquery_dict);
+        Py_DECREF(pydummy);
     }
     else {
-        // TODO Fix path info so it doesn't there is no query info
         query_string=strdup(rst_uri);
         path_info=strsep(&query_string,"?");
         pydummy=PyString_FromString(path_info);
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
+        Py_DECREF(pydummy);
         pydummy=PyString_FromString(path_info);        
         PyDict_SetItemString(pydict,"QUERY_STRING",pydummy);
-        evhttp_parse_query(req->uri, uri_params);
-        pyquery_dict=py_from_queue_to_dict(uri_params,"");
-        PyDict_SetItemString(pydict,"QUERY_DICT",pyquery_dict);
-        
+        Py_DECREF(pydummy);
+        free(path_info);
     }
-    free(uri_params);
+    //free(uri_params);
     free(rst_uri);
-    Py_DECREF(pyquery_dict);
-    Py_DECREF(pydummy);
-    return pydict;
 }
 
 
@@ -203,7 +203,9 @@ update_environ(PyObject *pyenviron, PyObject *pydict)
 {
     PyObject *pyupdate=PyObject_GetAttrString(pyenviron, "update");
     PyObject_CallFunction(pyupdate, "(O)", pydict);
+    //Py_DECREF(pydict);
     Py_DECREF(pyupdate);
+    
 }
 
 
@@ -222,7 +224,7 @@ void
 python_handler( struct evhttp_request *req, void *arg)
 {
     struct evbuffer *evb=evbuffer_new();
-    PyObject *pyheaders_dict, *pyrequest_dict;
+    PyObject *pyheaders_dict;
  
     struct cb_params *params=(struct cb_params*)arg;
     //build environ
@@ -236,7 +238,8 @@ python_handler( struct evhttp_request *req, void *arg)
     // This just adds some variables that are needed
     // from parsing the uri
     
-    pyrequest_dict = py_build_request_variables(req, params->url_path);
+    PyObject *pyrequest_dict=PyDict_New();
+    py_build_request_variables(pyrequest_dict, req, params->url_path);
     update_environ(pyenviron, pyrequest_dict);
     Py_DECREF(pyrequest_dict);
 
@@ -283,6 +286,7 @@ python_handler( struct evhttp_request *req, void *arg)
     char *status_reasons=PyString_AsString(pystatus_reasons);
     Py_DECREF(pystatus_reasons);
     Py_DECREF(pystart_response);
+    Py_DECREF(pyenviron);
     evhttp_send_reply(req, status_code, status_reasons, evb);
     evbuffer_free(evb);    
     //free(params); generate a crash
