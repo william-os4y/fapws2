@@ -25,7 +25,12 @@ def start():
         start_response('200 WHYNOT', [('toto',4444)])
         return ["Hello"," World!!"]
     
+    def filetest(environ, start_response):
+        f=open('/tmp/test.html')
+        return f
+    
     evhttp.http_cb("/test",test)
+    evhttp.http_cb("/filetest",filetest)
     print "cb done"
     evhttp.gen_http_cb(generic)
     print "gen cb done"
