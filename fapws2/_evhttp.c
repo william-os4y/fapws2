@@ -220,11 +220,12 @@ signal_cb(int fd, short event, void *arg)
         evhttp_free(http_server);
 }
 
-void 
+void
 python_handler( struct evhttp_request *req, void *arg)
 {
     struct evbuffer *evb=evbuffer_new();
     PyObject *pyheaders_dict;
+    int index=0;
  
     struct cb_params *params=(struct cb_params*)arg;
     //build environ
@@ -251,8 +252,8 @@ python_handler( struct evhttp_request *req, void *arg)
     PyObject *pyarglist = Py_BuildValue("(OO)", pyenviron, pystart_response );
     PyObject *pyresult = PyEval_CallObject(params->pycbobj,pyarglist);
     Py_DECREF(pyarglist);
-    if (!PyString_Check(pyresult)) {
-          PyErr_SetString(PyExc_TypeError, "Result must be a string");
+    if (!PyList_Check(pyresult)) {
+          PyErr_SetString(PyExc_TypeError, "Result must be a list");
           //return NUL;
     }
     //get status_code and reason
@@ -271,9 +272,6 @@ python_handler( struct evhttp_request *req, void *arg)
        //Py_DECREF(pyvalue);
     }
     Py_DECREF(pyresponse_headers_dict);
-    char *res=PyString_AsString(pyresult);
-    Py_DECREF(pyresult);
-    evbuffer_add_printf(evb, res);
     //printf("Request from %s:", req->remote_host);
     //get start_response data
     PyObject *pystatus_code=PyObject_GetAttrString(pystart_response,"status_code");
@@ -287,7 +285,19 @@ python_handler( struct evhttp_request *req, void *arg)
     Py_DECREF(pystatus_reasons);
     Py_DECREF(pystart_response);
     Py_DECREF(pyenviron);
-    evhttp_send_reply(req, status_code, status_reasons, evb);
+    evhttp_send_reply_start(req, status_code, status_reasons);
+    char *res="";
+    printf("before loop\n");
+    for (index=0; index<PyList_Size(pyresult); index++) {
+        printf("in loop =%i\n", index);
+        res=PyString_AsString(PyList_GetItem(pyresult, index));
+        printf("PYTHON RES:%s\n", res);
+        evbuffer_add_printf(evb, res);    
+    }
+    evhttp_send_reply_chunk(req, evb);
+    evhttp_send_reply_end(req);
+    Py_DECREF(pyresult);
+    
     evbuffer_free(evb);    
     //free(params); generate a crash
 }
