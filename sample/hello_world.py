@@ -26,7 +26,7 @@ def start():
         return ["Hello"," World!!"]
     
     def filetest(environ, start_response):
-        f=open('/tmp/test.html')
+        f=open("short.txt", "rb")
         return f
     
     evhttp.http_cb("/test",test)

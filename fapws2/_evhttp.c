@@ -269,7 +269,7 @@ python_handler( struct evhttp_request *req, void *arg)
        //Py_DECREF(pyvalue);
     }
     Py_DECREF(pyresponse_headers_dict);
-    //printf("Request from %s:", req->remote_host);
+    //printf("Request from %s:%i\n", req->remote_host, req->remote_port);
     //get start_response data
     PyObject *pystatus_code=PyObject_GetAttrString(pystart_response,"status_code");
     int status_code;
@@ -293,20 +293,17 @@ python_handler( struct evhttp_request *req, void *arg)
     } else if (PyFile_Check(pyresult)) {
         //printf("FILE RESULT\n");
         char buff[2048]="";
+        int bytes=0;
         FILE *file=PyFile_AsFile(pyresult);
-        while (fread(buff, 1, sizeof(buff), file)) {
-             //printf("FILE:%i \n",strlen(buff));
-             evbuffer_add_printf(evb, buff);    
+        while (bytes=fread(buff, 1, sizeof(buff), file)) {
+             //printf("FILE:%i \n",bytes);
+             evbuffer_add(evb, buff, bytes);    
              evhttp_send_reply_chunk(req, evb);
-             if (feof(file))
-                 evbuffer_add_printf(evb, buff);    
-                 evhttp_send_reply_chunk(req, evb);
-                 break;
+             buff[0]='\0';
         }
-        
         evhttp_send_reply_end(req);
     } else {
-        PyErr_SetString(PyExc_TypeError, "Result must be a list");
+        PyErr_SetString(PyExc_TypeError, "Result must be a listi or a fileobject");
         //return NUL;
     }
 
