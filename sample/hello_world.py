@@ -8,7 +8,7 @@ sys.setcheckinterval=100000 # since we don't use threads, internal checks are no
 
 def start():
     evhttp.start("0.0.0.0", 8080)
-    print "started"
+    
     #print evhttp.get_timeout()
     #evhttp.set_timeout(3)
     #print evhttp.get_timeout()
@@ -41,13 +41,11 @@ def start():
     evhttp.http_cb("/test",test)
     evhttp.http_cb("/static/",staticfile)
     evhttp.http_cb("/class", Test())
-    print "cb done"
-    evhttp.gen_http_cb(generic)
-    print "gen cb done"
     
-    print "before loop"
+    evhttp.gen_http_cb(generic)
+        
     evhttp.event_dispatch()
-    print "after loop"
+    
 
 if __name__=="__main__":
     start()

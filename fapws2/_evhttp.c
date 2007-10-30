@@ -209,19 +209,19 @@ update_environ(PyObject *pyenviron, PyObject *pydict)
     
 }
 
-
 void 
 signal_cb(int fd, short event, void *arg)
 {
         struct event *signal = arg;
-
+#ifdef DEBUG
         printf("got signal %d\n", EVENT_SIGNAL(signal));
+#endif
         //TODO: call end callback
         event_del(signal);
         evhttp_free(http_server);
 }
 
-void
+void 
 python_handler( struct evhttp_request *req, void *arg)
 {
     struct evbuffer *evb=evbuffer_new();
@@ -253,7 +253,9 @@ python_handler( struct evhttp_request *req, void *arg)
     //execute python callbacks with his parameters
     PyObject *pyarglist = Py_BuildValue("(OO)", pyenviron, pystart_response );
     PyObject *pyresult = PyEval_CallObject(params->pycbobj,pyarglist);
+#ifdef DEBUG
     printf("pass callobject\n");
+#endif
     if (pyresult==NULL) {
         printf("We have an error in the python code:\n");
         //PyErr_SetString(PyExc_TypeError, "we have an error in the python code");
@@ -266,7 +268,9 @@ python_handler( struct evhttp_request *req, void *arg)
     PyObject *pyresponse_headers_dict=PyObject_GetAttrString(pystart_response, "response_headers");
     PyObject *pykey, *pyvalue;
     int pos = 0;
-    //printf("Check:%s\n", req->uri);
+#ifdef DEBUG
+    printf("Check:%s\n", req->uri);
+#endif
     if (PyDict_Check(pyresponse_headers_dict)) {
         while (PyDict_Next(pyresponse_headers_dict, &pos, &pykey, &pyvalue)) {
             evhttp_add_header(req->output_headers, PyString_AsString(pykey), PyString_AsString(pyvalue));
@@ -277,7 +281,9 @@ python_handler( struct evhttp_request *req, void *arg)
        //Py_DECREF(pyvalue);
     }
     Py_DECREF(pyresponse_headers_dict);
+#ifdef DEBUG
     printf("passheader \n");
+#endif
     //printf("Request from %s:%i\n", req->remote_host, req->remote_port);
     //get start_response data
     PyObject *pystatus_code=PyObject_GetAttrString(pystart_response,"status_code");
@@ -285,18 +291,26 @@ python_handler( struct evhttp_request *req, void *arg)
     char *status_code_str=PyString_AsString(pystatus_code);
     Py_DECREF(pystatus_code);
     status_code=atoi(status_code_str);
+#ifdef DEBUG
     printf("pass status code:%i\n", status_code);
+#endif
     PyObject *pystatus_reasons=PyObject_GetAttrString(pystart_response,"status_reasons");
     char *status_reasons=PyString_AsString(pystatus_reasons);
     Py_DECREF(pystatus_reasons);
+#ifdef DEBUG
     printf("pass status reason:%s\n", status_reasons);
+#endif
     Py_DECREF(pystart_response);
     Py_DECREF(pyenviron);
     
     evhttp_send_reply_start(req, status_code, status_reasons);
+#ifdef DEBUG
     printf("send status code and status reasons\n");
+#endif
     if (PyList_Check(pyresult)) {
+#ifdef DEBUG
         printf("wsgi output is a list\n");
+#endif
         for (index=0; index<PyList_Size(pyresult); index++) {
             res=PyString_AsString(PyList_GetItem(pyresult, index));
             evbuffer_add_printf(evb, res);    
@@ -304,7 +318,9 @@ python_handler( struct evhttp_request *req, void *arg)
         }
         evhttp_send_reply_end(req);
     } else if (PyFile_Check(pyresult)) {
+#ifdef DEBUG
         printf("wsgi output is a file\n");
+#endif
         char buff[2048]="";
         int bytes=0;
         FILE *file=PyFile_AsFile(pyresult);
@@ -392,7 +408,6 @@ py_evhttp_get_timeout(PyObject *self, PyObject *args)
     int timeout;
 
     timeout=http_server->timeout;
-    printf("timeout %d\n", http_server->timeout);
     return Py_BuildValue("i", timeout);
 }
 
@@ -404,7 +419,6 @@ py_evhttp_set_timeout(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "i", &timeout))
         return NULL;
     evhttp_set_timeout(http_server,timeout);
-    printf("new timeout %d\n", http_server->timeout);
     return Py_None;
 }
 
@@ -465,6 +479,8 @@ PyMODINIT_FUNC
 init_evhttp(void)
 {
     event_init();
+#ifdef DEBUG
     printf("init\n");
+#endif
     (void) Py_InitModule("_evhttp", EvhttpMethods);
 }

@@ -20,6 +20,7 @@ setup (name = "fapws2",
 	       library_dirs=['/var/abs/local/libevent/src/libevent-1.3e'],
 	       libraries=['event'],
            #extra_compile_args=["-ggdb"],
+           define_macros=[("DEBUG", "1")],
 	       )
 	       ]
 )
