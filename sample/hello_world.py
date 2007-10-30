@@ -20,17 +20,27 @@ def start():
     
     def test(environ, start_response):
         #print "Header", environ.env
-        #print environ.env['QUERY_DICT']
+        #print environ.env
         #time.sleep(1)
         start_response('200 WHYNOT', [('toto',4444)])
         return ["Hello"," World!!"]
     
-    def filetest(environ, start_response):
-        f=open("short.txt", "rb")
+    def staticfile(environ, start_response):
+        print environ.env
+        #try:
+        f=open(environ.env['PATH_INFO'], "rb")
+        #except:
+        #    f=["Page not found"]
         return f
+    class Test:
+        def __init__(self):
+            pass
+        def __call__(self, environ, start_response):
+            return ["Hello from Test"]
     
     evhttp.http_cb("/test",test)
-    evhttp.http_cb("/filetest",filetest)
+    evhttp.http_cb("/static/",staticfile)
+    evhttp.http_cb("/class", Test())
     print "cb done"
     evhttp.gen_http_cb(generic)
     print "gen cb done"

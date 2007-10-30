@@ -9,8 +9,8 @@ from fapws2 import log
 from fapws2 import utils
 import _evhttp as evhttp
 
+import config
 
-SERVER_IDENT = "fapws2/0.1"
 
 status_reasons = {
     100: 'Continue',
@@ -88,6 +88,8 @@ class Start_response:
         # NEW -- sent records whether or not the headers have been send to the
         # client
         self.sent= False
+        self.response_headers['Date'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        self.response_headers['Server'] = config.SERVER_IDENT
 
     def __call__(self, status, response_headers, exc_info=None):
         self.status_code, self.status_reasons = status.split()
@@ -123,8 +125,6 @@ class Start_response:
             self.cookies[key] = ''
         self.cookies[key]['max-age'] = "0"
     def __str__(self):
-        self.response_headers['Date'] = datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
-        self.response_headers['Server'] = SERVER_IDENT
         #res = "HTTP/1.1 %s %s\r\n" % (self.status_code, self.status_reasons)
         res=""
         for key, val in self.response_headers.items():

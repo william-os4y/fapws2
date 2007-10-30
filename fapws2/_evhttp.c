@@ -90,7 +90,7 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
 
 
 struct evhttp* http_server;
-PyObject *py_base_module;
+PyObject *py_base_module, *py_config_module;
 struct cb_params {
     char *url_path;
     PyObject *pycbobj;
@@ -187,6 +187,7 @@ py_set_base_module(PyObject *self, PyObject *args)
 {
     if (!PyArg_ParseTuple(args, "O", &py_base_module)) 
         return NULL;
+    py_config_module=PyObject_GetAttrString(py_base_module, "config");
     return Py_None;    
 }
 
@@ -252,6 +253,13 @@ python_handler( struct evhttp_request *req, void *arg)
     //execute python callbacks with his parameters
     PyObject *pyarglist = Py_BuildValue("(OO)", pyenviron, pystart_response );
     PyObject *pyresult = PyEval_CallObject(params->pycbobj,pyarglist);
+    printf("pass callobject\n");
+    if (pyresult==NULL) {
+        printf("We have an error in the python code:\n");
+        //PyErr_SetString(PyExc_TypeError, "we have an error in the python code");
+         PyErr_Print();
+        return ;
+    }
     Py_DECREF(pyarglist);
     //get status_code and reason
     //set headers
@@ -269,6 +277,7 @@ python_handler( struct evhttp_request *req, void *arg)
        //Py_DECREF(pyvalue);
     }
     Py_DECREF(pyresponse_headers_dict);
+    printf("passheader \n");
     //printf("Request from %s:%i\n", req->remote_host, req->remote_port);
     //get start_response data
     PyObject *pystatus_code=PyObject_GetAttrString(pystart_response,"status_code");
@@ -276,14 +285,18 @@ python_handler( struct evhttp_request *req, void *arg)
     char *status_code_str=PyString_AsString(pystatus_code);
     Py_DECREF(pystatus_code);
     status_code=atoi(status_code_str);
-
+    printf("pass status code:%i\n", status_code);
     PyObject *pystatus_reasons=PyObject_GetAttrString(pystart_response,"status_reasons");
     char *status_reasons=PyString_AsString(pystatus_reasons);
     Py_DECREF(pystatus_reasons);
+    printf("pass status reason:%s\n", status_reasons);
     Py_DECREF(pystart_response);
     Py_DECREF(pyenviron);
+    
     evhttp_send_reply_start(req, status_code, status_reasons);
+    printf("send status code and status reasons\n");
     if (PyList_Check(pyresult)) {
+        printf("wsgi output is a list\n");
         for (index=0; index<PyList_Size(pyresult); index++) {
             res=PyString_AsString(PyList_GetItem(pyresult, index));
             evbuffer_add_printf(evb, res);    
@@ -291,11 +304,11 @@ python_handler( struct evhttp_request *req, void *arg)
         }
         evhttp_send_reply_end(req);
     } else if (PyFile_Check(pyresult)) {
-        //printf("FILE RESULT\n");
+        printf("wsgi output is a file\n");
         char buff[2048]="";
         int bytes=0;
         FILE *file=PyFile_AsFile(pyresult);
-        while (bytes=fread(buff, 1, sizeof(buff), file)) {
+        while ((bytes=fread(buff, 1, sizeof(buff), file))) {
              //printf("FILE:%i \n",bytes);
              evbuffer_add(evb, buff, bytes);    
              evhttp_send_reply_chunk(req, evb);
@@ -303,8 +316,9 @@ python_handler( struct evhttp_request *req, void *arg)
         }
         evhttp_send_reply_end(req);
     } else {
-        PyErr_SetString(PyExc_TypeError, "Result must be a listi or a fileobject");
-        //return NUL;
+        printf("wsgi output of %s is neither a list neither a fileobject\n",PyString_AsString(PyObject_Repr(params->pycbobj)));
+        //PyErr_SetString(PyExc_TypeError, "Result must be a list or a fileobject");
+        return ;
     }
 
     Py_DECREF(pyresult);
