@@ -84,11 +84,6 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
 
 
 
-
-
-
-
-
 struct evhttp* http_server;
 PyObject *py_base_module, *py_config_module;
 struct cb_params {
@@ -123,10 +118,10 @@ void
 py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *url_path)
 {
     //PyObject* pydict = PyDict_New();
-    PyObject *pymethod=NULL;
+    PyObject *pymethod=NULL, *pyinput=NULL;
     char *rst_uri, *path_info, *query_string;
     int len=0;
-    PyObject *pydummy;
+    PyObject *pydummy=NULL;
 
     pydummy=PyString_FromString(server_name);
     PyDict_SetItemString(pydict, "SERVER_NAME", pydummy);
@@ -135,14 +130,54 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
     PyDict_SetItemString(pydict, "SERVER_PORT", pydummy);
     Py_DECREF(pydummy);
 
+    printf("INPUT LENGTH:%i\n",EVBUFFER_LENGTH(req->input_buffer));
+    
+    PyObject *pystringio_module=PyObject_GetAttrString(py_base_module, "StringIO");
+    PyObject *pystringio=PyObject_GetAttrString(pystringio_module, "StringIO");
+    Py_DECREF(pystringio_module);
+    
+    printf("REQ TYPE%i\n", req->type);
     switch( req->type )
     {
-        case EVHTTP_REQ_POST: pymethod = PyString_FromString("POST");
-        case EVHTTP_REQ_HEAD: pymethod = PyString_FromString("HEAD");
-        case EVHTTP_REQ_GET: pymethod = PyString_FromString("GET");
+        case EVHTTP_REQ_POST: 
+            {
+#ifdef DEBUG
+                printf("POST METHOD%i\n", EVHTTP_REQ_POST);
+#endif
+                pymethod = PyString_FromString("POST");
+                pydummy=PyString_FromString(EVBUFFER_DATA(req->input_buffer));
+                pyinput=PyObject_CallFunction(pystringio, "(O)", pydummy);
+                Py_DECREF(pydummy);
+                Py_DECREF(pystringio);
+            }
+            break;
+        case EVHTTP_REQ_HEAD: 
+            {
+#ifdef DEBUG
+                printf("HEAD METHOD%i\n",EVHTTP_REQ_HEAD);
+#endif
+                pymethod = PyString_FromString("HEAD");
+                pyinput=PyObject_CallFunction(pystringio, NULL);
+                Py_DECREF(pystringio);
+            }
+            break;
+        case EVHTTP_REQ_GET: 
+            {
+#ifdef DEBUG
+                printf("GET METHOD%i\n", EVHTTP_REQ_GET);
+#endif
+                pymethod = PyString_FromString("GET");
+                pyinput=PyObject_CallFunction(pystringio, NULL);
+                Py_DECREF(pystringio);
+            }
+            break;
     }
     PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
     Py_DECREF(pymethod);
+    printf("pass\n");
+    PyDict_SetItemString(pydict, "wsgi.input", pyinput);
+    printf("pass\n");
+    Py_DECREF(pyinput);
 
     // Clean up the uri 
     len=strlen(req->uri)-strlen(url_path)+1;
@@ -259,7 +294,8 @@ python_handler( struct evhttp_request *req, void *arg)
     if (pyresult==NULL) {
         printf("We have an error in the python code:\n");
         //PyErr_SetString(PyExc_TypeError, "we have an error in the python code");
-         PyErr_Print();
+         if (PyErr_Occurred()) 
+             PyErr_Print();
         return ;
     }
     Py_DECREF(pyarglist);

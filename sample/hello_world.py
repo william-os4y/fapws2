@@ -27,18 +27,22 @@ def start():
     
     def staticfile(environ, start_response):
         print environ.env
-        #try:
-        f=open(environ.env['PATH_INFO'], "rb")
-        #except:
-        #    f=["Page not found"]
+        try:
+            f=open(environ.env['PATH_INFO'], "rb")
+        except:
+            f=["Page not found"]
         return f
+    def testpost(environ, start_response):
+        print "INPUT DATA",environ.env["wsgi.input"].read()
+        return ["OK"]
     class Test:
         def __init__(self):
             pass
         def __call__(self, environ, start_response):
             return ["Hello from Test"]
     
-    evhttp.http_cb("/test",test)
+    #evhttp.http_cb("/test",test)
+    evhttp.http_cb("/testpost", testpost)
     evhttp.http_cb("/static/",staticfile)
     evhttp.http_cb("/class", Test())
     
