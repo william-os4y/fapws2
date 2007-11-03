@@ -35,6 +35,18 @@ def start():
         except:
             f=["Page not found"]
         return f
+    def staticlong(environ, start_response):
+        try:
+            f=open("long.txt", "rb")
+        except:
+            f=["Page not found"]
+        return f
+    def staticshort(environ, start_response):
+        try:
+            f=open("short.txt", "rb")
+        except:
+            f=["Page not found"]
+        return f
     def testpost(environ, start_response):
         print "INPUT DATA",environ["wsgi.input"].getvalue()
         print "fapws.PARAMS",environ["fapws.params"]
@@ -48,6 +60,8 @@ def start():
     evhttp.http_cb("/hello",hello)
     evhttp.http_cb("/testpost", testpost)
     evhttp.http_cb("/static/",staticfile)
+    evhttp.http_cb("/long", staticlong)
+    evhttp.http_cb("/short", staticshort)
     evhttp.http_cb("/class", Test())
     evhttp.http_cb("/",hello)
     
