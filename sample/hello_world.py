@@ -21,6 +21,8 @@ def start():
     
     def hello(environ, start_response):
         #print "Header", environ.env
+        if environ["PATH_INFO"]!="":
+            return generic(environ, start_response)
         #print "params",environ.env["fapws.params"]
         #print "query",environ.env["QUERY_STRING"]
         #time.sleep(1)
@@ -47,6 +49,7 @@ def start():
     evhttp.http_cb("/testpost", testpost)
     evhttp.http_cb("/static/",staticfile)
     evhttp.http_cb("/class", Test())
+    evhttp.http_cb("/",hello)
     
     evhttp.gen_http_cb(generic)
         

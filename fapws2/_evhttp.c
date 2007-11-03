@@ -319,7 +319,7 @@ python_handler( struct evhttp_request *req, void *arg)
     PyObject *pydict;
     int index=0;
     char *res="";
- 
+
     struct cb_params *params=(struct cb_params*)arg;
     //build environ
     //  1)initialise environ

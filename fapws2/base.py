@@ -80,9 +80,9 @@ class Environ:
     def update_method(self, data):
         #note that wsgi.input is not passed by data, but directly update in self.env
         self.env.update(data)
-    def __get__(self,key):
+    def __getitem__(self,key):
         return self.env.get(key, None)
-    def __set__(self,key,val):
+    def __setitem__(self,key,val):
         self.env[key]=val
     def getenv(self):
         return self.env
