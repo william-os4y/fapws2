@@ -74,6 +74,7 @@ class Environ:
         self.env['wsgi.multiprocess'] = True
         self.env['wsgi.run_once'] = False
         self.env['wsgi.url_scheme']="http"   #TODO:  support of https
+        self.env['fapws.params']={}
     def update(self, data):
         self.env.update(data)
 

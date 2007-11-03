@@ -18,12 +18,13 @@ def start():
     def generic(environ, start_response):
         return ["Page not found"]
     
-    def test(environ, start_response):
+    def hello(environ, start_response):
         #print "Header", environ.env
-        #print environ.env
+        #print "params",environ.env["fapws.params"]
+        #print "query",environ.env["QUERY_STRING"]
         #time.sleep(1)
-        start_response('200 WHYNOT', [('toto',4444)])
-        return ["Hello"," World!!"]
+        #start_response('200 WHYNOT', [('toto',4444)])
+        return ["Hello World!!"]
     
     def staticfile(environ, start_response):
         print environ.env
@@ -34,6 +35,7 @@ def start():
         return f
     def testpost(environ, start_response):
         print "INPUT DATA",environ.env["wsgi.input"].read()
+        print "fapws.PARAMS",environ.env["fapws.params"]
         return ["OK"]
     class Test:
         def __init__(self):
@@ -41,7 +43,7 @@ def start():
         def __call__(self, environ, start_response):
             return ["Hello from Test"]
     
-    #evhttp.http_cb("/test",test)
+    evhttp.http_cb("/hello",hello)
     evhttp.http_cb("/testpost", testpost)
     evhttp.http_cb("/static/",staticfile)
     evhttp.http_cb("/class", Test())

@@ -83,7 +83,9 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
 }
 
 
-
+/*
+Global declaration
+*/
 struct evhttp* http_server;
 PyObject *py_base_module, *py_config_module;
 struct cb_params {
@@ -92,6 +94,59 @@ struct cb_params {
 };
 char *server_name=NULL;
 short server_port;
+
+
+PyObject *parse_query(char *);
+
+PyObject *
+py_parse_query(PyObject *self, PyObject *args)
+{
+    char *uri;
+
+    if (!PyArg_ParseTuple(args, "s", &uri))
+        return NULL;
+    return parse_query(uri);
+}
+
+PyObject *
+parse_query(char * uri)
+{
+    PyObject *pydict=PyDict_New();
+    char *line;
+    char *p;
+    if ((line = strdup(uri)) == NULL) {
+        printf("failed to strdup\n");
+        return NULL;
+    }
+    p=line;
+    
+    while (p != NULL && *p != '\0') {
+        char  *value, *key;
+        PyObject *pyelem;
+        PyObject *pydummy;
+        value = strsep(&p, "&");
+        key = strsep(&value, "=");
+        if (value==NULL) {
+            value="";
+        }
+        value=evhttp_decode_uri(value);
+        if ((pyelem=PyDict_GetItemString(pydict, key))==NULL) {
+            pyelem=PyList_New(0);
+        } else {
+            Py_INCREF(pyelem); // because of GetItem 
+        }
+        if (!PyList_Check(pyelem))
+            return NULL;
+        pydummy=PyString_FromString(value);
+        PyList_Append(pyelem, pydummy);
+        Py_DECREF(pydummy);
+        PyDict_SetItemString(pydict, key, pyelem);
+        Py_DECREF(pyelem); 
+        free(value);
+    }
+    free(line);
+    return pydict;
+}
 
 static PyObject *
 py_from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
@@ -130,13 +185,10 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
     PyDict_SetItemString(pydict, "SERVER_PORT", pydummy);
     Py_DECREF(pydummy);
 
-    printf("INPUT LENGTH:%i\n",EVBUFFER_LENGTH(req->input_buffer));
-    
     PyObject *pystringio_module=PyObject_GetAttrString(py_base_module, "StringIO");
     PyObject *pystringio=PyObject_GetAttrString(pystringio_module, "StringIO");
     Py_DECREF(pystringio_module);
     
-    printf("REQ TYPE%i\n", req->type);
     switch( req->type )
     {
         case EVHTTP_REQ_POST: 
@@ -144,11 +196,19 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
 #ifdef DEBUG
                 printf("POST METHOD%i\n", EVHTTP_REQ_POST);
 #endif
+                char *buff;
                 pymethod = PyString_FromString("POST");
-                pydummy=PyString_FromString(EVBUFFER_DATA(req->input_buffer));
+                buff=malloc(EVBUFFER_LENGTH(req->input_buffer)+1);
+                strncpy(buff,(char *)EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
+                buff[EVBUFFER_LENGTH(req->input_buffer)]='\0';
+                pydummy=PyString_FromString(buff);
                 pyinput=PyObject_CallFunction(pystringio, "(O)", pydummy);
                 Py_DECREF(pydummy);
                 Py_DECREF(pystringio);
+                pydummy=parse_query(buff);
+                free(buff);
+                PyDict_SetItemString(pydict,"fapws.params",pydummy);
+                Py_DECREF(pydummy);
             }
             break;
         case EVHTTP_REQ_HEAD: 
@@ -174,9 +234,7 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
     }
     PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
     Py_DECREF(pymethod);
-    printf("pass\n");
     PyDict_SetItemString(pydict, "wsgi.input", pyinput);
-    printf("pass\n");
     Py_DECREF(pyinput);
 
     // Clean up the uri 
@@ -186,7 +244,7 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
     pydummy=PyString_FromString(url_path);
     PyDict_SetItemString(pydict, "SCRIPT_NAME", pydummy);
     Py_DECREF(pydummy);
-  
+
     if (strchr(rst_uri, '?') == NULL) {
         pydummy=PyString_FromString(rst_uri);
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
@@ -201,8 +259,11 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
         pydummy=PyString_FromString(path_info);
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
         Py_DECREF(pydummy);
-        pydummy=PyString_FromString(path_info);        
+        pydummy=PyString_FromString(query_string);        
         PyDict_SetItemString(pydict,"QUERY_STRING",pydummy);
+        Py_DECREF(pydummy);
+        pydummy=parse_query(query_string);
+        PyDict_SetItemString(pydict,"fapws.params",pydummy);
         Py_DECREF(pydummy);
         free(path_info);
     }
@@ -478,7 +539,7 @@ py_htmlescape(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "s", &data))
         return NULL;
-    result = evhttp_htmlescape(data);
+    result = evhttp_htmlescape(data); //need to be free
     return Py_BuildValue("s", result);
 }
 
@@ -507,7 +568,8 @@ static PyMethodDef EvhttpMethods[] = {
     {"gen_http_cb", py_genhttp_cb, METH_VARARGS, "Generic HTTP callback"},
     {"set_base_module", py_set_base_module, METH_VARARGS, "set you base module"},
     {"encode_uri",py_evhttp_encode_uri, METH_VARARGS, "encode the uri"},
-    
+    {"parse_query", py_parse_query, METH_VARARGS, "parse query into dictionary"},
+
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
