@@ -16,28 +16,28 @@ def start():
     evhttp.set_base_module(base)
     
     def generic(environ, start_response):
-        #print "GENERIC ENV",environ.env
+        print "GENERIC ENV",environ
         return ["Page not found"]
     
     def hello(environ, start_response):
-        #print "Header", environ.env
+        #print "Header", environ
         if environ["PATH_INFO"]!="":
             return generic(environ, start_response)
-        #print "params",environ.env["fapws.params"]
-        #print "query",environ.env["QUERY_STRING"]
+        #print "params",environ["fapws.params"]
+        #print "query",environ["QUERY_STRING"]
         #time.sleep(1)
         start_response('200 WHYNOT', [('toto',4444)])
         return ["Hello World!!"]
     
     def staticfile(environ, start_response):
         try:
-            f=open(environ.env['PATH_INFO'], "rb")
+            f=open(environ['PATH_INFO'], "rb")
         except:
             f=["Page not found"]
         return f
     def testpost(environ, start_response):
-        print "INPUT DATA",environ.env["wsgi.input"].getvalue()
-        print "fapws.PARAMS",environ.env["fapws.params"]
+        print "INPUT DATA",environ["wsgi.input"].getvalue()
+        print "fapws.PARAMS",environ["fapws.params"]
         return ["OK"]
     class Test:
         def __init__(self):

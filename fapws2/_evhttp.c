@@ -22,6 +22,7 @@
 #include "event.h"
 #include "evhttp.h"
 #include "http-internal.h"
+#include "log.h"
 
 
 
@@ -324,7 +325,11 @@ python_handler( struct evhttp_request *req, void *arg)
     //build environ
     //  1)initialise environ
     PyObject *pyenviron_class=PyObject_GetAttrString(py_base_module, "Environ");
-    PyObject *pyenviron=PyInstance_New(pyenviron_class, NULL, NULL);
+    if (!pyenviron_class)
+         event_err(1,"load Environ failed Environ from base module");
+    PyObject *pyenviron=PyObject_CallObject(pyenviron_class, NULL);
+    if (!pyenviron)
+         event_err(1,"Fail to create an instance of Environ");
     Py_DECREF(pyenviron_class);
     //  2)transform headers into adictionary and send it to environ.update_headers
     pydict=py_build_environ(req->input_headers);
@@ -335,11 +340,11 @@ python_handler( struct evhttp_request *req, void *arg)
     update_environ(pyenviron, pydict, "update_uri");
     Py_DECREF(pydict);
     //  4)in case of POST analyse the request and send it to environ.update_method
-    PyObject *pyenv_meth=PyObject_GetAttrString(pyenviron, "getenv");
-    PyObject *pyenv_dict=PyObject_CallFunction(pyenv_meth, NULL);
-    Py_DECREF(pyenv_meth);
-    pydict=py_build_method_variables(pyenv_dict, req);
-    Py_DECREF(pyenv_dict);
+    //PyObject *pyenv_meth=PyObject_GetAttrString(pyenviron, "getenv");
+    //PyObject *pyenv_dict=PyObject_CallFunction(pyenv_meth, NULL);
+    //Py_DECREF(pyenv_meth);
+    pydict=py_build_method_variables(pyenviron, req);
+    //Py_DECREF(pyenv_dict);
     update_environ(pyenviron, pydict, "update_method");
     Py_DECREF(pydict);
     

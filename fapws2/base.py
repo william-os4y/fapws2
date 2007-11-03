@@ -62,31 +62,23 @@ status_reasons = {
 }
 
 
-class Environ:
-    def __init__(self):
-        self.env={}
-        self.env['wsgi.version'] = (1,0)
-        #self.env['wgsi.errors'] = log.error_logfid
-        self.env['wsgi.input'] = StringIO.StringIO()
-        self.env['wsgi.multithread'] = False
-        self.env['wsgi.multiprocess'] = True
-        self.env['wsgi.run_once'] = False
-        self.env['wsgi.url_scheme']="http"   #TODO:  support of https
-        self.env['fapws.params']={}
+class Environ(dict):
+    def __init__(self, *arg, **kw):
+        self['wsgi.version'] = (1,0)
+        #self['wgsi.errors'] = log.error_logfid
+        self['wsgi.input'] = StringIO.StringIO()
+        self['wsgi.multithread'] = False
+        self['wsgi.multiprocess'] = True
+        self['wsgi.run_once'] = False
+        self['wsgi.url_scheme']="http"   #TODO:  support of https
+        self['fapws.params']={}
     def update_headers(self, data):
-        self.env.update(data)
+        dict.update(self,data)
     def update_uri(self, data):
-        self.env.update(data)
+        dict.update(self,data)
     def update_method(self, data):
         #note that wsgi.input is not passed by data, but directly update in self.env
-        self.env.update(data)
-    def __getitem__(self,key):
-        return self.env.get(key, None)
-    def __setitem__(self,key,val):
-        self.env[key]=val
-    def getenv(self):
-        return self.env
-
+        dict.update(self,data)
 
 class Start_response:
     def __init__(self):
@@ -102,7 +94,7 @@ class Start_response:
         self.response_headers['Server'] = config.SERVER_IDENT
 
     def __call__(self, status, response_headers, exc_info=None):
-        self.status_code, self.status_reasons = status.split()
+        self.status_code, self.status_reasons = status.split(" ",1)
         self.status_code=str(self.status_code)
         for key,val in response_headers:
             #if type(key)!=type(""):
