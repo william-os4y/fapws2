@@ -539,8 +539,10 @@ py_htmlescape(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "s", &data))
         return NULL;
-    result = evhttp_htmlescape(data); //need to be free
-    return Py_BuildValue("s", result);
+    result = evhttp_htmlescape(data); 
+    PyObject *pyres=Py_BuildValue("s", result);
+    free(result);
+    return pyres;
 }
 
 
@@ -553,7 +555,9 @@ py_evhttp_encode_uri(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "s", &data))
         return NULL;
     result = evhttp_encode_uri(data);
-    return Py_BuildValue("s", result);
+    PyObject *pyres=Py_BuildValue("s", result);
+    free(result);
+    return pyres;
 }
 
 
