@@ -526,6 +526,18 @@ py_evhttp_set_timeout(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+py_evhttp_set_retries(PyObject *self, PyObject *args)
+{
+    int retries;
+
+    if (!PyArg_ParseTuple(args, "i", &retries))
+        return NULL;
+    evhttp_set_retires(http_server,retries);
+    return Py_None;
+}
+
+
+static PyObject *
 py_event_dispatch(PyObject *self, PyObject *args)
 {
     struct event signal_int;
@@ -566,6 +578,19 @@ py_evhttp_encode_uri(PyObject *self, PyObject *args)
     return pyres;
 }
 
+static PyObject *
+py_evhttp_decode_uri(PyObject *self, PyObject *args)
+{
+    const char *data;
+    char *result;
+
+    if (!PyArg_ParseTuple(args, "s", &data))
+        return NULL;
+    result = evhttp_decode_uri(data);
+    PyObject *pyres=Py_BuildValue("s", result);
+    free(result);
+    return pyres;
+}
 
 static PyMethodDef EvhttpMethods[] = {
     {"htmlescape", py_htmlescape, METH_VARARGS, "html escape"}, 
@@ -573,11 +598,13 @@ static PyMethodDef EvhttpMethods[] = {
     {"free", py_evhttp_free, METH_VARARGS, "free evhttp"},
     {"get_timeout", py_evhttp_get_timeout, METH_VARARGS, "get connection timeout"},
     {"set_timeout", py_evhttp_set_timeout, METH_VARARGS, "set connection timeout"},
+    {"set_retries", py_evhttp_set_retries, METH_VARARGS, "set connection retries"},
     {"event_dispatch", py_event_dispatch, METH_VARARGS, "Event dispatch"},
     {"http_cb", py_evhttp_cb, METH_VARARGS, "HTTP Event callback"},
     {"gen_http_cb", py_genhttp_cb, METH_VARARGS, "Generic HTTP callback"},
     {"set_base_module", py_set_base_module, METH_VARARGS, "set you base module"},
     {"encode_uri",py_evhttp_encode_uri, METH_VARARGS, "encode the uri"},
+    {"decode_uri",py_evhttp_decode_uri, METH_VARARGS, "decode the uri"},
     {"parse_query", py_parse_query, METH_VARARGS, "parse query into dictionary"},
 
     {NULL, NULL, 0, NULL}        /* Sentinel */
