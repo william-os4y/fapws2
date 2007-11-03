@@ -169,11 +169,10 @@ py_from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
     return pydict;
 }
 
-void
-py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *url_path)
+PyObject *
+py_build_uri_variables(struct evhttp_request *req, char *url_path)
 {
-    //PyObject* pydict = PyDict_New();
-    PyObject *pymethod=NULL, *pyinput=NULL;
+    PyObject* pydict = PyDict_New();
     char *rst_uri, *path_info, *query_string;
     int len=0;
     PyObject *pydummy=NULL;
@@ -184,58 +183,6 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
     pydummy=Py_BuildValue("h", server_port);
     PyDict_SetItemString(pydict, "SERVER_PORT", pydummy);
     Py_DECREF(pydummy);
-
-    PyObject *pystringio_module=PyObject_GetAttrString(py_base_module, "StringIO");
-    PyObject *pystringio=PyObject_GetAttrString(pystringio_module, "StringIO");
-    Py_DECREF(pystringio_module);
-    
-    switch( req->type )
-    {
-        case EVHTTP_REQ_POST: 
-            {
-#ifdef DEBUG
-                printf("POST METHOD%i\n", EVHTTP_REQ_POST);
-#endif
-                char *buff;
-                pymethod = PyString_FromString("POST");
-                buff=malloc(EVBUFFER_LENGTH(req->input_buffer)+1);
-                strncpy(buff,(char *)EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
-                buff[EVBUFFER_LENGTH(req->input_buffer)]='\0';
-                pydummy=PyString_FromString(buff);
-                pyinput=PyObject_CallFunction(pystringio, "(O)", pydummy);
-                Py_DECREF(pydummy);
-                Py_DECREF(pystringio);
-                pydummy=parse_query(buff);
-                free(buff);
-                PyDict_SetItemString(pydict,"fapws.params",pydummy);
-                Py_DECREF(pydummy);
-            }
-            break;
-        case EVHTTP_REQ_HEAD: 
-            {
-#ifdef DEBUG
-                printf("HEAD METHOD%i\n",EVHTTP_REQ_HEAD);
-#endif
-                pymethod = PyString_FromString("HEAD");
-                pyinput=PyObject_CallFunction(pystringio, NULL);
-                Py_DECREF(pystringio);
-            }
-            break;
-        case EVHTTP_REQ_GET: 
-            {
-#ifdef DEBUG
-                printf("GET METHOD%i\n", EVHTTP_REQ_GET);
-#endif
-                pymethod = PyString_FromString("GET");
-                pyinput=PyObject_CallFunction(pystringio, NULL);
-                Py_DECREF(pystringio);
-            }
-            break;
-    }
-    PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
-    Py_DECREF(pymethod);
-    PyDict_SetItemString(pydict, "wsgi.input", pyinput);
-    Py_DECREF(pyinput);
 
     // Clean up the uri 
     len=strlen(req->uri)-strlen(url_path)+1;
@@ -267,10 +214,66 @@ py_build_request_variables(PyObject *pydict, struct evhttp_request *req, char *u
         Py_DECREF(pydummy);
         free(path_info);
     }
-    //free(uri_params);
     free(rst_uri);
+    return pydict;
 }
 
+PyObject *
+py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
+{
+    PyObject* pydict = PyDict_New();
+    PyObject *pymethod=NULL;
+    PyObject *pydummy=NULL;
+
+    
+    switch( req->type )
+    {
+        case EVHTTP_REQ_POST: 
+            {
+#ifdef DEBUG
+                printf("POST METHOD%i\n", EVHTTP_REQ_POST);
+#endif
+                char *buff;
+                pymethod = PyString_FromString("POST");
+
+                PyObject *pystringio=PyDict_GetItemString(pyenvdict, "wsgi.input");
+                Py_INCREF(pystringio);
+                PyObject *pystringio_write=PyObject_GetAttrString(pystringio, "write");
+                Py_DECREF(pystringio);
+                buff=malloc(EVBUFFER_LENGTH(req->input_buffer)+1);
+                strncpy(buff,(char *)EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
+                buff[EVBUFFER_LENGTH(req->input_buffer)]='\0';
+                pydummy=PyString_FromString(buff);
+                PyObject_CallFunction(pystringio_write, "(O)", pydummy);
+                Py_DECREF(pydummy);
+                Py_DECREF(pystringio_write);
+                pydummy=parse_query(buff);
+                free(buff);
+                PyDict_SetItemString(pydict,"fapws.params",pydummy);
+                Py_DECREF(pydummy);
+            }
+            break;
+        case EVHTTP_REQ_HEAD: 
+            {
+#ifdef DEBUG
+                printf("HEAD METHOD%i\n",EVHTTP_REQ_HEAD);
+#endif
+                pymethod = PyString_FromString("HEAD");
+            }
+            break;
+        case EVHTTP_REQ_GET: 
+            {
+#ifdef DEBUG
+                printf("GET METHOD%i\n", EVHTTP_REQ_GET);
+#endif
+                pymethod = PyString_FromString("GET");
+            }
+            break;
+    }
+    PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
+    Py_DECREF(pymethod);
+    return pydict;
+}
 
 static PyObject *
 py_build_environ(const struct evkeyvalq *headers)
@@ -288,17 +291,9 @@ py_set_base_module(PyObject *self, PyObject *args)
 }
 
 void 
-reset_environ(PyObject *pyenviron)
+update_environ(PyObject *pyenviron, PyObject *pydict, char *method)
 {
-    PyObject *pyreset=PyObject_GetAttrString(pyenviron, "reset");
-    PyObject_CallFunction(pyreset, NULL);
-    Py_DECREF(pyreset);
-}
-
-void 
-update_environ(PyObject *pyenviron, PyObject *pydict)
-{
-    PyObject *pyupdate=PyObject_GetAttrString(pyenviron, "update");
+    PyObject *pyupdate=PyObject_GetAttrString(pyenviron, method);
     PyObject_CallFunction(pyupdate, "(O)", pydict);
     //Py_DECREF(pydict);
     Py_DECREF(pyupdate);
@@ -321,27 +316,33 @@ void
 python_handler( struct evhttp_request *req, void *arg)
 {
     struct evbuffer *evb=evbuffer_new();
-    PyObject *pyheaders_dict;
+    PyObject *pydict;
     int index=0;
     char *res="";
  
     struct cb_params *params=(struct cb_params*)arg;
     //build environ
+    //  1)initialise environ
     PyObject *pyenviron_class=PyObject_GetAttrString(py_base_module, "Environ");
     PyObject *pyenviron=PyInstance_New(pyenviron_class, NULL, NULL);
     Py_DECREF(pyenviron_class);
-    reset_environ(pyenviron);
-    pyheaders_dict=py_build_environ(req->input_headers);
-    update_environ(pyenviron, pyheaders_dict);
-    Py_DECREF(pyheaders_dict);
-    // This just adds some variables that are needed
-    // from parsing the uri
+    //  2)transform headers into adictionary and send it to environ.update_headers
+    pydict=py_build_environ(req->input_headers);
+    update_environ(pyenviron, pydict, "update_headers");
+    Py_DECREF(pydict);
+    //  3)transform uri and send it to environ.update_uri
+    pydict=py_build_uri_variables(req, params->url_path);
+    update_environ(pyenviron, pydict, "update_uri");
+    Py_DECREF(pydict);
+    //  4)in case of POST analyse the request and send it to environ.update_method
+    PyObject *pyenv_meth=PyObject_GetAttrString(pyenviron, "getenv");
+    PyObject *pyenv_dict=PyObject_CallFunction(pyenv_meth, NULL);
+    Py_DECREF(pyenv_meth);
+    pydict=py_build_method_variables(pyenv_dict, req);
+    Py_DECREF(pyenv_dict);
+    update_environ(pyenviron, pydict, "update_method");
+    Py_DECREF(pydict);
     
-    PyObject *pyrequest_dict=PyDict_New();
-    py_build_request_variables(pyrequest_dict, req, params->url_path);
-    update_environ(pyenviron, pyrequest_dict);
-    Py_DECREF(pyrequest_dict);
-
     //build start_response
     PyObject *pystart_response_class=PyObject_GetAttrString(py_base_module, "Start_response");
     PyObject *pystart_response=PyInstance_New(pystart_response_class, NULL, NULL);

@@ -65,18 +65,27 @@ status_reasons = {
 class Environ:
     def __init__(self):
         self.env={}
-    def reset(self):
-        self.env={}
         self.env['wsgi.version'] = (1,0)
         #self.env['wgsi.errors'] = log.error_logfid
-        #self.env['wsgi.input'] = StringIO.StringIO('')
+        self.env['wsgi.input'] = StringIO.StringIO()
         self.env['wsgi.multithread'] = False
         self.env['wsgi.multiprocess'] = True
         self.env['wsgi.run_once'] = False
         self.env['wsgi.url_scheme']="http"   #TODO:  support of https
         self.env['fapws.params']={}
-    def update(self, data):
+    def update_headers(self, data):
         self.env.update(data)
+    def update_uri(self, data):
+        self.env.update(data)
+    def update_method(self, data):
+        #note that wsgi.input is not passed by data, but directly update in self.env
+        self.env.update(data)
+    def __get__(self,key):
+        return self.env.get(key, None)
+    def __set__(self,key,val):
+        self.env[key]=val
+    def getenv(self):
+        return self.env
 
 
 class Start_response:
