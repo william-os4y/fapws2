@@ -2,6 +2,12 @@
 # To build and install the elemlist module you need the following
 # setup.py file that uses the distutils:
 from distutils.core import setup, Extension
+import os
+ 
+if os.environ.has_key('LIBEVENT_SRC'):
+        libevent_src = os.environ['LIBEVENT_SRC']
+else:
+        libevent_src = '/var/abs/local/libevent/src/libevent-1.3e'
 
 setup (name = "fapws2",
        version = "0.1",
@@ -16,8 +22,8 @@ setup (name = "fapws2",
            # I'm on an archlinux ;-)
            # Here I'm pointing to the direcoty where libevent has been build
            # In this directory wi can find sources and compiled objects (as after a "./configure; make")
-	       include_dirs=['/var/abs/local/libevent/src/libevent-1.3e'],
-	       library_dirs=['/var/abs/local/libevent/src/libevent-1.3e'],
+	       include_dirs=[libevent_src],
+	       library_dirs=[libevent_src],
 	       libraries=['event'],
            #extra_compile_args=["-ggdb"],
            #define_macros=[("DEBUG", "1")],
