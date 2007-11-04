@@ -5,6 +5,9 @@ try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
+import traceback, sys, string
+
+
 from fapws2 import log
 from fapws2 import utils
 import _evhttp as evhttp
@@ -137,5 +140,23 @@ class Start_response:
         res += "\r\n"
         return res
         
+def errorMsg():
+    ctype=None
+    value=None
+    tb=None
+    limit=None
+    ctype, value, tb = sys.exc_info()
+    print "ctype",ctype
+    print "value", value
+    print "tb", tb
+    body = "Traceback (innermost last):\n"
+    lelem = traceback.format_tb(tb, limit) + traceback.format_exception_only(ctype, value)
+    body = body + "%-20s %s" % (string.join(lelem[:-1], ""),lelem[-1])
+    print "body", body
+    return body
 
-
+if __name__=="__main__":
+    try:
+        r=1/0
+    except:
+        print errorMsg()

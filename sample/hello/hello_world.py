@@ -16,7 +16,7 @@ def start():
     evhttp.set_base_module(base)
     
     def generic(environ, start_response):
-        print "GENERIC ENV",environ
+        #print "GENERIC ENV",environ
         return ["Page not found"]
     
     def hello(environ, start_response):
@@ -42,15 +42,12 @@ def start():
             f=["Page not found"]
         return f
     def staticshort(environ, start_response):
-        try:
-            f=open("short.txt", "rb")
-        except:
-            f=["Page not found"]
+        f=ope("short.txt", "rb")
         return f
     def testpost(environ, start_response):
         print "INPUT DATA",environ["wsgi.input"].getvalue()
         print "fapws.PARAMS",environ["fapws.params"]
-        return ["OK"]
+        return ["OK. params are:%s" % (environ["fapws.params"])]
     class Test:
         def __init__(self):
             pass

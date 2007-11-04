@@ -296,7 +296,6 @@ update_environ(PyObject *pyenviron, PyObject *pydict, char *method)
 {
     PyObject *pyupdate=PyObject_GetAttrString(pyenviron, method);
     PyObject_CallFunction(pyupdate, "(O)", pydict);
-    //Py_DECREF(pydict);
     Py_DECREF(pyupdate);
     
 }
@@ -305,9 +304,7 @@ void
 signal_cb(int fd, short event, void *arg)
 {
         struct event *signal = arg;
-#ifdef DEBUG
         printf("got signal %d\n", EVENT_SIGNAL(signal));
-#endif
         //TODO: call end callback
         event_del(signal);
         evhttp_free(http_server);
@@ -340,11 +337,7 @@ python_handler( struct evhttp_request *req, void *arg)
     update_environ(pyenviron, pydict, "update_uri");
     Py_DECREF(pydict);
     //  4)in case of POST analyse the request and send it to environ.update_method
-    //PyObject *pyenv_meth=PyObject_GetAttrString(pyenviron, "getenv");
-    //PyObject *pyenv_dict=PyObject_CallFunction(pyenv_meth, NULL);
-    //Py_DECREF(pyenv_meth);
     pydict=py_build_method_variables(pyenviron, req);
-    //Py_DECREF(pyenv_dict);
     update_environ(pyenviron, pydict, "update_method");
     Py_DECREF(pydict);
     
@@ -360,9 +353,17 @@ python_handler( struct evhttp_request *req, void *arg)
 #endif
     if (pyresult==NULL) {
         printf("We have an error in the python code:\n");
-        //PyErr_SetString(PyExc_TypeError, "we have an error in the python code");
-         if (PyErr_Occurred()) 
+         if (PyErr_Occurred()) { 
+             /*
+             PyObject *pyerrormsg_method=PyObject_GetAttrString(py_base_module,"errorMsg");
+             PyObject *pyerrormsg=PyObject_CallFunction(pyerrormsg_method, NULL);
+             Py_DECREF(pyerrormsg_method);
+             printf("ERROR:%s\n", PyString_AsString(pyerrormsg));
+             Py_DECREF(pyerrormsg);
+             //this does not work ;-(
+             */
              PyErr_Print();
+         }
         return ;
     }
     Py_DECREF(pyarglist);
@@ -379,14 +380,12 @@ python_handler( struct evhttp_request *req, void *arg)
             evhttp_add_header(req->output_headers, PyString_AsString(pykey), PyString_AsString(pyvalue));
             //printf("ADD HEADER:%s=%s\n", PyString_AsString(pykey), PyString_AsString(pyvalue));
         }
-       //when uncomment server crash. why ?
-       //Py_DECREF(pykey);
-       //Py_DECREF(pyvalue);
     }
     Py_DECREF(pyresponse_headers_dict);
 #ifdef DEBUG
     printf("passheader \n");
 #endif
+    //TODO: build a apache like log file
     //printf("Request from %s:%i\n", req->remote_host, req->remote_port);
     //get start_response data
     PyObject *pystatus_code=PyObject_GetAttrString(pystart_response,"status_code");
@@ -526,18 +525,6 @@ py_evhttp_set_timeout(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-py_evhttp_set_retries(PyObject *self, PyObject *args)
-{
-    int retries;
-
-    if (!PyArg_ParseTuple(args, "i", &retries))
-        return NULL;
-    evhttp_set_retires(http_server,retries);
-    return Py_None;
-}
-
-
-static PyObject *
 py_event_dispatch(PyObject *self, PyObject *args)
 {
     struct event signal_int;
@@ -598,7 +585,6 @@ static PyMethodDef EvhttpMethods[] = {
     {"free", py_evhttp_free, METH_VARARGS, "free evhttp"},
     {"get_timeout", py_evhttp_get_timeout, METH_VARARGS, "get connection timeout"},
     {"set_timeout", py_evhttp_set_timeout, METH_VARARGS, "set connection timeout"},
-    {"set_retries", py_evhttp_set_retries, METH_VARARGS, "set connection retries"},
     {"event_dispatch", py_event_dispatch, METH_VARARGS, "Event dispatch"},
     {"http_cb", py_evhttp_cb, METH_VARARGS, "HTTP Event callback"},
     {"gen_http_cb", py_genhttp_cb, METH_VARARGS, "Generic HTTP callback"},
