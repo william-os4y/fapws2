@@ -26,6 +26,19 @@
 
 
 
+
+void
+send_error(struct evhttp_request *req, char *msg)
+{
+        char *escaped_html = evhttp_htmlescape(req->uri);
+        struct evbuffer *buf = evbuffer_new();
+        evhttp_response_code(req, HTTP_NOTFOUND, "Not Found");
+        evbuffer_add_printf(buf, msg, escaped_html);
+        free(escaped_html);
+        evhttp_send_page(req, buf);
+        evbuffer_free(buf);
+}
+
 /* This is a slightly modified version of the evhttp_handle_request module of libevent
 This one return once the begining of the requested uri match one of the registered ones.
 */
@@ -67,19 +80,7 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
             "<h1>Not Found</h1>"
             "<p>The requested URL %s was not found on this server.</p>"
             "</body></html>\n";
-
-        char *escaped_html = evhttp_htmlescape(req->uri);
-        struct evbuffer *buf = evbuffer_new();
-
-        evhttp_response_code(req, HTTP_NOTFOUND, "Not Found");
-
-        evbuffer_add_printf(buf, fmt, escaped_html);
-
-        free(escaped_html);
-        
-        evhttp_send_page(req, buf);
-
-        evbuffer_free(buf);
+        send_error(req, fmt);
     }
 }
 
@@ -310,6 +311,7 @@ signal_cb(int fd, short event, void *arg)
         evhttp_free(http_server);
 }
 
+
 void 
 python_handler( struct evhttp_request *req, void *arg)
 {
@@ -348,25 +350,52 @@ python_handler( struct evhttp_request *req, void *arg)
     //execute python callbacks with his parameters
     PyObject *pyarglist = Py_BuildValue("(OO)", pyenviron, pystart_response );
     PyObject *pyresult = PyEval_CallObject(params->pycbobj,pyarglist);
+    Py_DECREF(pyarglist);
 #ifdef DEBUG
     printf("pass callobject\n");
 #endif
     if (pyresult==NULL) {
-        printf("We have an error in the python code:\n");
+        printf("We have an error in the python code associated to the url :%s\n", req->uri);
          if (PyErr_Occurred()) { 
-             /*
-             PyObject *pyerrormsg_method=PyObject_GetAttrString(py_base_module,"errorMsg");
+             //get_traceback();
+             
+             PyObject *pyerrormsg_method=PyObject_GetAttrString(py_base_module,"redirectStdErr");
              PyObject *pyerrormsg=PyObject_CallFunction(pyerrormsg_method, NULL);
              Py_DECREF(pyerrormsg_method);
-             printf("ERROR:%s\n", PyString_AsString(pyerrormsg));
              Py_DECREF(pyerrormsg);
-             //this does not work ;-(
-             */
              PyErr_Print();
+             PyObject *pysys=PyObject_GetAttrString(py_base_module,"sys");
+             PyObject *pystderr=PyObject_GetAttrString(pysys,"stderr");
+             Py_DECREF(pysys);
+/*             PyObject *pyclose_method=PyObject_GetAttrString(pystderr, "close");
+             PyObject *pyclose=PyObject_CallFunction(pyclose_method, NULL);
+             Py_DECREF(pyclose_method);
+             Py_DECREF(pyclose);*/
+             PyObject *pygetvalue=PyObject_GetAttrString(pystderr, "getvalue");
+             Py_DECREF(pystderr);
+             PyObject *pyres=PyObject_CallFunction(pygetvalue, NULL);
+             Py_DECREF(pygetvalue);
+             printf("%s\n", PyString_AsString(pyres));
+             //TODO test if we must send it to the page
+             PyObject *pysendtraceback = PyObject_GetAttrString(py_config_module,"send_traceback_to_browser");
+             char htmlres[2048];
+             if (pysendtraceback==Py_True) {
+                sprintf(htmlres, "%s%s%s", "Error for %s:<br/><pre>", PyString_AsString(pyres), "</pre>");
+             } else {
+                PyObject *pyshortmsg = PyObject_GetAttrString(py_config_module,"send_traceback_short");
+                sprintf(htmlres, "%s%s", "Error for %s:<br/>", PyString_AsString(pyshortmsg));
+                Py_DECREF(pyshortmsg);
+             }
+             Py_DECREF(pyres);
+             send_error(req, htmlres);
+             Py_DECREF(pysendtraceback);
+             //need to close what was already open
+             Py_DECREF(pystart_response);
+             Py_DECREF(pyenviron);
+             evbuffer_free(evb);
          }
         return ;
     }
-    Py_DECREF(pyarglist);
     //get status_code and reason
     //set headers
     PyObject *pyresponse_headers_dict=PyObject_GetAttrString(pystart_response, "response_headers");
@@ -423,7 +452,7 @@ python_handler( struct evhttp_request *req, void *arg)
 #ifdef DEBUG
         printf("wsgi output is a file\n");
 #endif
-        char buff[2048]="";
+        char buff[2048]="";  //this is the chunk size
         int bytes=0;
         FILE *file=PyFile_AsFile(pyresult);
         while ((bytes=fread(buff, 1, sizeof(buff), file))) {

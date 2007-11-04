@@ -140,20 +140,14 @@ class Start_response:
         res += "\r\n"
         return res
         
-def errorMsg():
-    ctype=None
-    value=None
-    tb=None
-    limit=None
-    ctype, value, tb = sys.exc_info()
-    print "ctype",ctype
-    print "value", value
-    print "tb", tb
-    body = "Traceback (innermost last):\n"
-    lelem = traceback.format_tb(tb, limit) + traceback.format_exception_only(ctype, value)
-    body = body + "%-20s %s" % (string.join(lelem[:-1], ""),lelem[-1])
-    print "body", body
-    return body
+def redirectStdErr():
+    """
+    This methods allow use to redirect messages sent to stderr into a string
+    Mandatory methods of the sys.stderr object are: 
+        write: to insert data
+        getvalue; to retreive all data
+    """
+    sys.stderr=StringIO.StringIO()
 
 if __name__=="__main__":
     try:
