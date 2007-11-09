@@ -235,7 +235,7 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
 #ifdef DEBUG
                 printf("POST METHOD%i\n", EVHTTP_REQ_POST);
 #endif
-                char *buff;
+                char *buff, length[10];
                 pymethod = PyString_FromString("POST");
 
                 PyObject *pystringio=PyDict_GetItemString(pyenvdict, "wsgi.input");
@@ -249,6 +249,15 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
                 PyObject_CallFunction(pystringio_write, "(O)", pydummy);
                 Py_DECREF(pydummy);
                 Py_DECREF(pystringio_write);
+                PyObject *pystringio_seek=PyObject_GetAttrString(pystringio, "seek");
+                pydummy=PyInt_FromString("0", NULL, 10);
+                PyObject_CallFunction(pystringio_seek, "(O)", pydummy);
+                Py_DECREF(pydummy);
+                Py_DECREF(pystringio_seek);
+                sprintf(length, "%i", EVBUFFER_LENGTH(req->input_buffer));
+                pydummy=PyString_FromString(length);
+                PyDict_SetItemString(pydict, "CONTENT_LENGTH", pydummy);
+                Py_DECREF(pydummy);
                 pydummy=parse_query(buff);
                 free(buff);
                 PyDict_SetItemString(pydict,"fapws.params",pydummy);
