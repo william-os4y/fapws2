@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Wiki Index</h1>
+    <div class="main">
+{% for page in pages %}
+    <h3><a href='{{ page.title }}/'>{{ page.title }}</a></h3>
+{% endfor %}
+    </div>
+    <div id='badge'>
+    <a href="http://www.djangoproject.com/"><img src="http://media.djangoproject.com/img/badges/djangomade124x25_grey.gif" border="0" alt="Made with Django." title="Made with Django."></a>
+</div>
+
+{% endblock %}

@@ -14,7 +14,7 @@ setup (name = "fapws2",
        maintainer = "William",
        maintainer_email = "william@opensource4you.com",
        description = "Sample Python module",
-       packages= ['fapws2'],
+       packages= ['fapws2','fapws2/contrib'],
 
        ext_modules = [
 	       Extension('_evhttp',

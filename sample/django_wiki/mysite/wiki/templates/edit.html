@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Editing: {{ page.title }}</h1>
+    <div class="body">
+        <form action='{{ page.editurl }}' method='post'>
+            <input name='title' value="{{ page.title }}" />
+            <br />
+            <textarea name='content' cols='64' rows='16'>{{ page.content }}</textarea>
+            <input type='submit' value="Save" />
+        </form>
+        <form action="/delete/" method='post'>
+            <input type='hidden' name='title' value="{{ page.title }}" />
+            <input type='submit' value='Delete' />
+        </form>
+    </div>
+{% endblock %}

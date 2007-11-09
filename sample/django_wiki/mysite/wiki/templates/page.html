@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load wikitags %}
+{% block title %}
+{{ page.title }}
+{% endblock %}
+{% block content %}
+    <h1>{{ page.title }}</h1>
+    <div class="body">
+        {{ page.content|wikify }}
+    </div>
+    <div class="controls">
+        <a href='{{ page.editurl }}'>Edit this page</a> | <a href='/wiki/'>Wiki Index</a> | {% now "Y-m-d" %}
+    </div>
+{% endblock %}
