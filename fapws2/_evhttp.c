@@ -85,6 +85,38 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
 }
 
 
+char *
+decode_uri(const char *uri)
+{
+    char c, *ret;
+    int i, j;
+    
+    ret = malloc(strlen(uri) + 1);
+    if (ret == NULL)
+        event_err(1, "%s: malloc(%d)", __func__, strlen(uri) + 1);
+
+    for (i = j = 0; uri[i] != '\0'; i++) {
+        c = uri[i];
+        if (c == '+') {
+            c = ' ';
+        } else if (c == '%' && isxdigit((unsigned char)uri[i+1]) &&
+            isxdigit((unsigned char)uri[i+2])) {
+            char tmp[] = { uri[i+1], uri[i+2], '\0' };
+            c = (char)strtol(tmp, NULL, 16);
+            i += 2;
+        }
+        ret[j++] = c;
+    }
+    ret[j] = '\0';
+    
+    return (ret);
+}
+
+
+
+
+
+
 /*
 Global declaration
 */
@@ -131,7 +163,7 @@ parse_query(char * uri)
         if (value==NULL) {
             value="";
         }
-        value=evhttp_decode_uri(value);
+        //value=evhttp_decode_uri(value);
         if ((pyelem=PyDict_GetItemString(pydict, key))==NULL) {
             pyelem=PyList_New(0);
         } else {
@@ -144,7 +176,6 @@ parse_query(char * uri)
         Py_DECREF(pydummy);
         PyDict_SetItemString(pydict, key, pyelem);
         Py_DECREF(pyelem); 
-        free(value);
     }
     free(line);
     return pydict;
@@ -175,7 +206,7 @@ PyObject *
 py_build_uri_variables(struct evhttp_request *req, char *url_path)
 {
     PyObject* pydict = PyDict_New();
-    char *rst_uri, *path_info, *query_string;
+    char *uri, *rst_uri, *path_info, *query_string;
     int len=0;
     PyObject *pydummy=NULL;
 
@@ -186,10 +217,12 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
     PyDict_SetItemString(pydict, "SERVER_PORT", pydummy);
     Py_DECREF(pydummy);
 
+    //decode the uri
+    uri=decode_uri(req->uri);
     // Clean up the uri 
-    len=strlen(req->uri)-strlen(url_path)+1;
+    len=strlen(uri)-strlen(url_path)+1;
     rst_uri = calloc(len, sizeof(char));
-    strncpy(rst_uri, req->uri + strlen(url_path), len);
+    strncpy(rst_uri, uri + strlen(url_path), len);
     pydummy=PyString_FromString(url_path);
     PyDict_SetItemString(pydict, "SCRIPT_NAME", pydummy);
     Py_DECREF(pydummy);
@@ -217,6 +250,7 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
         free(path_info);
     }
     free(rst_uri);
+    free(uri);
     return pydict;
 }
 
@@ -245,6 +279,7 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
                 buff=malloc(EVBUFFER_LENGTH(req->input_buffer)+1);
                 strncpy(buff,(char *)EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
                 buff[EVBUFFER_LENGTH(req->input_buffer)]='\0';
+                buff=decode_uri(buff);
                 pydummy=PyString_FromString(buff);
                 PyObject_CallFunction(pystringio_write, "(O)", pydummy);
                 Py_DECREF(pydummy);
@@ -604,14 +639,14 @@ py_evhttp_encode_uri(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-py_evhttp_decode_uri(PyObject *self, PyObject *args)
+py_decode_uri(PyObject *self, PyObject *args)
 {
     const char *data;
     char *result;
 
     if (!PyArg_ParseTuple(args, "s", &data))
         return NULL;
-    result = evhttp_decode_uri(data);
+    result = decode_uri(data);
     PyObject *pyres=Py_BuildValue("s", result);
     free(result);
     return pyres;
@@ -628,7 +663,7 @@ static PyMethodDef EvhttpMethods[] = {
     {"gen_http_cb", py_genhttp_cb, METH_VARARGS, "Generic HTTP callback"},
     {"set_base_module", py_set_base_module, METH_VARARGS, "set you base module"},
     {"encode_uri",py_evhttp_encode_uri, METH_VARARGS, "encode the uri"},
-    {"decode_uri",py_evhttp_decode_uri, METH_VARARGS, "decode the uri"},
+    {"decode_uri",py_decode_uri, METH_VARARGS, "decode the uri"},
     {"parse_query", py_parse_query, METH_VARARGS, "parse query into dictionary"},
 
     {NULL, NULL, 0, NULL}        /* Sentinel */
