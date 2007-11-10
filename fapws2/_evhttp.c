@@ -84,7 +84,9 @@ evhttp_handle_request(struct evhttp_request *req, void *arg)
     }
 }
 
-
+/* 
+  modified version of evhttp_decode_uri which does not look for the char "?"
+*/
 char *
 decode_uri(const char *uri)
 {
@@ -111,6 +113,9 @@ decode_uri(const char *uri)
     
     return (ret);
 }
+
+
+
 
 
 
@@ -318,6 +323,12 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
     }
     PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
     Py_DECREF(pymethod);
+    char *contenttype;
+    if ((contenttype=evhttp_find_header(req->input_headers,"Content-Type"))) {
+        pydummy=PyString_FromString(contenttype);
+        PyDict_SetItemString(pydict, "CONTENT_TYPE", pydummy);
+        Py_DECREF(pydummy);
+    }
     return pydict;
 }
 
