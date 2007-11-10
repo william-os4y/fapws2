@@ -245,6 +245,10 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
     PyDict_SetItemString(pydict, "SERVER_PORT", pydummy);
     Py_DECREF(pydummy);
 
+    pydummy=PyString_FromString(req->uri);
+    PyDict_SetItemString(pydict, "fapws.uri", pydummy);
+    Py_DECREF(pydummy);
+    
     //decode the uri
     uri=decode_uri(req->uri);
     // Clean up the uri 
@@ -355,6 +359,27 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
     return pydict;
 }
 
+PyObject *
+py_get_request_info(struct evhttp_request *req)
+{
+    PyObject* pydict = PyDict_New();
+    PyObject *pydummy=NULL;
+    
+    pydummy=PyString_FromString(req->remote_host);
+    PyDict_SetItemString(pydict, "fapws.remote_host", pydummy);
+    Py_DECREF(pydummy);
+    pydummy=Py_BuildValue("H", req->remote_port);
+    PyDict_SetItemString(pydict, "fapws.remote_port", pydummy);
+    Py_DECREF(pydummy);
+    pydummy=Py_BuildValue("b", req->major);
+    PyDict_SetItemString(pydict, "fapws.http_major", pydummy);
+    Py_DECREF(pydummy);
+    pydummy=Py_BuildValue("b", req->minor);
+    PyDict_SetItemString(pydict, "fapws.http_minor", pydummy);
+    Py_DECREF(pydummy);
+    return pydict;
+}
+
 static PyObject *
 py_build_environ(const struct evkeyvalq *headers)
 {
@@ -390,6 +415,8 @@ signal_cb(int fd, short event, void *arg)
 }
 
 
+
+
 void 
 python_handler( struct evhttp_request *req, void *arg)
 {
@@ -420,6 +447,10 @@ python_handler( struct evhttp_request *req, void *arg)
     pydict=py_build_method_variables(pyenviron, req);
     update_environ(pyenviron, pydict, "update_method");
     Py_DECREF(pydict);
+    //  5)add some request info
+    pydict=py_get_request_info(req);
+    update_environ(pyenviron, pydict, "update_from_request");
+    Py_DECREF(pydict);
     
     //build start_response
     PyObject *pystart_response_class=PyObject_GetAttrString(py_base_module, "Start_response");
@@ -436,7 +467,6 @@ python_handler( struct evhttp_request *req, void *arg)
         printf("We have an error in the python code associated to the url :%s\n", req->uri);
          if (PyErr_Occurred()) { 
              //get_traceback();
-             
              PyObject *pyerrormsg_method=PyObject_GetAttrString(py_base_module,"redirectStdErr");
              PyObject *pyerrormsg=PyObject_CallFunction(pyerrormsg_method, NULL);
              Py_DECREF(pyerrormsg_method);
@@ -454,7 +484,7 @@ python_handler( struct evhttp_request *req, void *arg)
              PyObject *pyres=PyObject_CallFunction(pygetvalue, NULL);
              Py_DECREF(pygetvalue);
              printf("%s\n", PyString_AsString(pyres));
-             //TODO test if we must send it to the page
+             //test if we must send it to the page
              PyObject *pysendtraceback = PyObject_GetAttrString(py_config_module,"send_traceback_to_browser");
              char htmlres[2048];
              if (pysendtraceback==Py_True) {

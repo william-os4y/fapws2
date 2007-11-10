@@ -75,12 +75,15 @@ class Environ(dict):
         self['wsgi.run_once'] = False
         self['wsgi.url_scheme']="http"   #TODO:  support of https
         self['fapws.params']={}
+    #here after some entry point before the Environ update
     def update_headers(self, data):
         dict.update(self,data)
     def update_uri(self, data):
         dict.update(self,data)
     def update_method(self, data):
         #note that wsgi.input is not passed by data, but directly update in self.env
+        dict.update(self,data)
+    def update_from_request(self, data):
         dict.update(self,data)
 
 class Start_response:
