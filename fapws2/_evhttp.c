@@ -186,6 +186,27 @@ parse_query(char * uri)
     return pydict;
 }
 
+char *
+transform_header_key_to_wsgi_key(char *key) 
+{
+    int i=0;
+    char elem, *res;
+
+    //printf("BEFORE TRANSF:%s\n", key);
+    res=malloc(strlen(key) + 1);
+    strcpy(res,key);
+    for (i=0; i<=strlen(key); i++) {
+       elem=key[i];
+       if (elem=='-')
+           elem='_';
+       else
+           elem=toupper(elem);
+       res[i]=elem;
+    }
+    //printf("AFTER TRANSF:%s\n", res);
+    return res;
+}
+
 static PyObject *
 py_from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
 {
@@ -194,14 +215,16 @@ py_from_queue_to_dict(const struct evkeyvalq *headers, char *key_head)
     PyObject *pyval;
     
     TAILQ_FOREACH(header, headers, next) {
-        char *key;
+        char *key, *head;
+        head=transform_header_key_to_wsgi_key(header->key);
         key=(char*)calloc(strlen(key_head)+strlen(header->key)+1, sizeof(char));
         strcat(key, key_head);
-        strcat(key,header->key);
+        strcat(key,head);
         pyval = Py_BuildValue("s", header->value );
         PyDict_SetItemString(pydict, key, pyval);
         Py_DECREF(pyval);
         free(key);
+        free(head);
     }
     free(header);
     return pydict;
