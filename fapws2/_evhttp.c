@@ -536,7 +536,10 @@ py_evhttp_start(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "si", &server_name, &server_port))
         return NULL;
     printf("start at: %s, %i\n",server_name, server_port);
-    http_server=evhttp_start( server_name, server_port);
+    if ((http_server=evhttp_start( server_name, server_port))==NULL) {
+        PyErr_SetString(PyExc_SystemError, "Error with http_start. No access to that server on that port.");
+        return NULL;
+    }
     return Py_None;
 }
 
