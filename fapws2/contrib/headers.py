@@ -7,3 +7,4 @@ def redirect(start_response, location, permanent=None):
     else:
         start_response('302 Moved Permanently', header)
     return []
+

@@ -6,6 +6,8 @@ import time
 import sys
 sys.setcheckinterval=100000 # since we don't use threads, internal checks are no more required
 
+from fapws2.contrib import views
+
 def start():
     evhttp.start("0.0.0.0", 8080)
     
@@ -29,12 +31,6 @@ def start():
         start_response('200 WHYNOT', [('toto',4444)])
         return ["Hello World!!"]
     
-    def staticfile(environ, start_response):
-        try:
-            f=open(environ['PATH_INFO'], "rb")
-        except:
-            f=["Page not found"]
-        return f
     def staticlong(environ, start_response):
         try:
             f=open("long.txt", "rb")
@@ -56,6 +52,7 @@ def start():
     
     evhttp.http_cb("/hello",hello)
     evhttp.http_cb("/testpost", testpost)
+    staticfile=views.Staticfile("/home/vi/projects/fapws2/sample/hello/")
     evhttp.http_cb("/static/",staticfile)
     evhttp.http_cb("/long", staticlong)
     evhttp.http_cb("/short", staticshort)

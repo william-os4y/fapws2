@@ -25,7 +25,7 @@ setup (name = "fapws2",
 	       include_dirs=[libevent_src],
 	       library_dirs=[libevent_src],
 	       libraries=['event'],
-           extra_compile_args=["-march=athlon-xp", "-mtune=athlon-xp"],
+           extra_compile_args=["-march=athlon-xp", "-mtune=athlon-xp", "-ggdb"],
            #define_macros=[("DEBUG", "1")],
 	       )
 	       ]
