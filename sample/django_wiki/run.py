@@ -12,20 +12,17 @@ import django
 def start():
     evhttp.start("0.0.0.0", 8080)
     
-    #print evhttp.get_timeout()
-    #evhttp.set_timeout(3)
-    #print evhttp.get_timeout()
-    
     evhttp.set_base_module(base)
     
-    @log.log_dec
+    @log.Log(open("access.log","a"))
     def generic(environ, start_response):
         #print "GENERIC ENV",environ
         res=django_handler.handler(environ, start_response)
         #r=str(djangohandler(environ, start_response)).split('\n',1)[1]
         return [res]
     
-    @log.log_dec
+    #here log will got to the standard output
+    @log.Log()
     def staticfile(environ, start_response):
         res=views.Staticfile(django.__path__[0] + '/contrib/admin/media/')
         return res(environ, start_response)
