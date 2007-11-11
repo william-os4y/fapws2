@@ -38,7 +38,7 @@ def start():
             f=["Page not found"]
         return f
     def staticshort(environ, start_response):
-        f=ope("short.txt", "rb")
+        f=open("short.txt", "rb")
         return f
     def testpost(environ, start_response):
         print "INPUT DATA",environ["wsgi.input"].getvalue()

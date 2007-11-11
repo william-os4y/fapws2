@@ -6,7 +6,7 @@ import time
 import sys
 sys.setcheckinterval=100000 # since we don't use threads, internal checks are no more required
 from fapws2.contrib import django_handler
-from fapws2.contrib import views, log
+from fapws2.contrib import views, log, zip
 import django
 
 def start():
@@ -14,7 +14,8 @@ def start():
     
     evhttp.set_base_module(base)
     
-    @log.Log(open("access.log","a"))
+    #@log.Log(open("access.log","a"))
+    @zip.Gzip()
     def generic(environ, start_response):
         #print "GENERIC ENV",environ
         res=django_handler.handler(environ, start_response)

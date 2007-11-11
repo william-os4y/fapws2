@@ -423,7 +423,6 @@ python_handler( struct evhttp_request *req, void *arg)
     struct evbuffer *evb=evbuffer_new();
     PyObject *pydict;
     int index=0;
-    char *res="";
 
     struct cb_params *params=(struct cb_params*)arg;
     //build environ
@@ -551,8 +550,11 @@ python_handler( struct evhttp_request *req, void *arg)
         printf("wsgi output is a list\n");
 #endif
         for (index=0; index<PyList_Size(pyresult); index++) {
-            res=PyString_AsString(PyList_GetItem(pyresult, index));
-            evbuffer_add_printf(evb, res);    
+            char *buff;
+            int buflen;
+            PyObject_AsReadBuffer(PyList_GetItem(pyresult, index), (const void **) &buff, &buflen);
+            //printf("SIZEOF:%i=%i,%i\n", index, strlen(buff), buflen);
+            evbuffer_add(evb, buff, buflen);    
             evhttp_send_reply_chunk(req, evb);
         }
         evhttp_send_reply_end(req);
