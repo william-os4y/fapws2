@@ -560,7 +560,7 @@ python_handler( struct evhttp_request *req, void *arg)
 #ifdef DEBUG
         printf("wsgi output is a file\n");
 #endif
-        char buff[2048]="";  //this is the chunk size
+        char buff[32768]="";  //this is the chunk size
         int bytes=0;
         FILE *file=PyFile_AsFile(pyresult);
         while ((bytes=fread(buff, 1, sizeof(buff), file))) {
