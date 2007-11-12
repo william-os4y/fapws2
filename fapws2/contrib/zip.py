@@ -15,7 +15,7 @@ class Gzip:
                 comp_file = gzip.GzipFile(mode='wb', compresslevel=6, fileobj=sio)
                 comp_file.write(content)
                 comp_file.close()
-                start_response('200 OK', [('Content-Encoding', 'gzip')])
+                start_response.add_header('Content-Encoding', 'gzip')
                 res=sio.getvalue()
                 return [res]
             else:

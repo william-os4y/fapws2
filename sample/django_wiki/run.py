@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 import _evhttp as evhttp
 from fapws2 import base
@@ -19,7 +18,6 @@ def start():
     def generic(environ, start_response):
         #print "GENERIC ENV",environ
         res=django_handler.handler(environ, start_response)
-        #r=str(djangohandler(environ, start_response)).split('\n',1)[1]
         return [res]
     
     #here log will got to the standard output

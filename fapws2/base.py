@@ -109,6 +109,10 @@ class Start_response:
             val=str(val)
             self.response_headers[key] = val
         self.exc_info = exc_info #TODO: to implement
+    def add_header(self, key,val):
+        key=str(key)
+        val=str(val)
+        self.response_headers[key]=val
     def set_cookie(self, key, value='', max_age=None, expires=None, path='/', domain=None, secure=None):
         self.cookies[key] = value
         self.response_headers['Set-Cookie'] = self.cookies
