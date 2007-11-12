@@ -3,11 +3,20 @@
 # setup.py file that uses the distutils:
 from distutils.core import setup, Extension
 import os
- 
+import os.path 
+import sys
+
 if os.environ.has_key('LIBEVENT_SRC'):
         libevent_src = os.environ['LIBEVENT_SRC']
 else:
         libevent_src = '/var/abs/local/libevent/src/libevent-1.3e'
+
+if not os.path.exists('/usr/lib/libevent.so'):
+    print "We don't find libevent installed!!!!"
+    sys.exit(1)
+print "We will use the followinf libevent sources:"
+print libevent_src
+print ""
 
 setup (name = "fapws2",
        version = "0.1",
@@ -23,9 +32,9 @@ setup (name = "fapws2",
            # Here I'm pointing to the direcoty where libevent has been build
            # In this directory wi can find sources and compiled objects (as after a "./configure; make")
 	       include_dirs=[libevent_src],
-	       library_dirs=[libevent_src],
+	       #library_dirs=[libevent_src],
 	       libraries=['event'],
-           extra_compile_args=["-march=athlon-xp", "-mtune=athlon-xp", "-ggdb"],
+           #extra_compile_args=["-march=athlon-xp", "-mtune=athlon-xp", "-ggdb"],
            #define_macros=[("DEBUG", "1")],
 	       )
 	       ]
