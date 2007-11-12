@@ -14,7 +14,7 @@ def start():
     evhttp.set_base_module(base)
     
     #@log.Log(open("access.log","a"))
-    @zip.Gzip()
+    #@zip.Gzip()
     def generic(environ, start_response):
         #print "GENERIC ENV",environ
         res=django_handler.handler(environ, start_response)
