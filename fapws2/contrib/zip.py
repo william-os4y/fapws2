@@ -10,7 +10,11 @@ class Gzip:
         def func(environ, start_response):
             content=f(environ, start_response)
             if 'gzip' in environ.get('HTTP_ACCEPT_ENCODING', ''):
-                content="".join(content)
+                if type(content)==type([]):
+                    content="".join(content)
+                else:
+                    #this is a sream
+                    content=content.read()
                 sio = StringIO.StringIO()
                 comp_file = gzip.GzipFile(mode='wb', compresslevel=6, fileobj=sio)
                 comp_file.write(content)
