@@ -12,4 +12,4 @@ class Wikipage(models.Model):
     def __repr__(self):
         return self.title
     class Admin:
-        pass
+        list_display=('title',)

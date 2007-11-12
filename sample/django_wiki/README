@@ -1,0 +1,11 @@
+To have it working you have some pre-requisits:
+1) build the sqlite3 database by executing the following command:
+"python mysite/manager syncb"
+and answer to the different questions (user name, password, email)
+2) export the DJANGO_SETTINGS_MODULE environment variable:
+"export DJANGO_SETTINGS_MODULE=mysite.settings" 
+(for sure, adapt the command export to your shell)
+3) add some "initial" data into the DB by running the script set_initial_data.py:
+python set_initial_data.py
+4) run the server: 
+"python run.py"
