@@ -23,7 +23,8 @@ def start():
     #here log will got to the standard output
     @log.Log()
     def staticfile(environ, start_response):
-        res=views.Staticfile(django.__path__[0] + '/contrib/admin/media/')
+        #we ask the browser to store those static files in his cache for 1 hour
+        res=views.Staticfile(django.__path__[0] + '/contrib/admin/media/', maxage=3600)
         return res(environ, start_response)
     
     evhttp.http_cb("/media/",staticfile)
