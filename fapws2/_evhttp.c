@@ -293,6 +293,8 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
     PyObject *pymethod=NULL;
     PyObject *pydummy=NULL;
 
+    char *contenttype;
+    contenttype=evhttp_find_header(req->input_headers,"Content-Type");
     
     switch( req->type )
     {
@@ -301,18 +303,13 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
 #ifdef DEBUG
                 printf("POST METHOD%i\n", EVHTTP_REQ_POST);
 #endif
-                char *buff, length[10];
+                char length[10];
                 pymethod = PyString_FromString("POST");
-
                 PyObject *pystringio=PyDict_GetItemString(pyenvdict, "wsgi.input");
                 Py_INCREF(pystringio);
                 PyObject *pystringio_write=PyObject_GetAttrString(pystringio, "write");
                 Py_DECREF(pystringio);
-                buff=malloc(EVBUFFER_LENGTH(req->input_buffer)+1);
-                strncpy(buff,(char *)EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
-                buff[EVBUFFER_LENGTH(req->input_buffer)]='\0';
-                buff=decode_uri(buff);
-                pydummy=PyString_FromString(buff);
+                pydummy=PyBuffer_FromMemory(EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
                 PyObject_CallFunction(pystringio_write, "(O)", pydummy);
                 Py_DECREF(pydummy);
                 Py_DECREF(pystringio_write);
@@ -325,10 +322,18 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
                 pydummy=PyString_FromString(length);
                 PyDict_SetItemString(pydict, "CONTENT_LENGTH", pydummy);
                 Py_DECREF(pydummy);
-                pydummy=parse_query(buff);
-                free(buff);
-                PyDict_SetItemString(pydict,"fapws.params",pydummy);
-                Py_DECREF(pydummy);
+                //fapws.params cannot be done in case of multipart
+                if (strncasecmp(contenttype, "multipart", 9)!=0) {
+                    char *buff;
+                    buff=malloc(EVBUFFER_LENGTH(req->input_buffer)+1);
+                    strncpy(buff,(char *)EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
+                    buff[EVBUFFER_LENGTH(req->input_buffer)]='\0';
+                    buff=decode_uri(buff);
+                    pydummy=parse_query(buff);
+                    free(buff);
+                    PyDict_SetItemString(pydict,"fapws.params",pydummy);
+                    Py_DECREF(pydummy);
+                }
             }
             break;
         case EVHTTP_REQ_HEAD: 
@@ -350,8 +355,7 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
     }
     PyDict_SetItemString(pydict, "REQUEST_METHOD", pymethod);
     Py_DECREF(pymethod);
-    char *contenttype;
-    if ((contenttype=evhttp_find_header(req->input_headers,"Content-Type"))) {
+    if (contenttype) {
         pydummy=PyString_FromString(contenttype);
         PyDict_SetItemString(pydict, "CONTENT_TYPE", pydummy);
         Py_DECREF(pydummy);
