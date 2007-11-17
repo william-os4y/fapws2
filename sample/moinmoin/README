@@ -1,0 +1,18 @@
+After having install MoinMoin via your prefered package management tool or via the sources, you need to do ifew steps.
+
+We suppose that insatallation path of MoinMoin is /usr/share/moin. If this is not the case for you, please adapt accordingly the next commands.
+
+This has been tested with MoinMoin-1.5.8
+
+1) create a wiki instance:
+- cp -R /usr/share/moin/data .
+- cp -R /usr/share/moin/underlay .
+- cp /usr/share/moin/config/wikiconfig.py .
+
+For a minimalist installation, I've not made modifications into wikiconfig.py.
+
+2) adap (if required) run.py Staticfile 
+3) start fapws2
+- python run.py
+
+
