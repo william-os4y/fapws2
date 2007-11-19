@@ -309,6 +309,7 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
                 Py_INCREF(pystringio);
                 PyObject *pystringio_write=PyObject_GetAttrString(pystringio, "write");
                 Py_DECREF(pystringio);
+                //TODO:we should add a check against limit
                 pydummy=PyBuffer_FromMemory(EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
                 PyObject_CallFunction(pystringio_write, "(O)", pydummy);
                 Py_DECREF(pydummy);
@@ -433,10 +434,10 @@ python_handler( struct evhttp_request *req, void *arg)
     //  1)initialise environ
     PyObject *pyenviron_class=PyObject_GetAttrString(py_base_module, "Environ");
     if (!pyenviron_class)
-         event_err(1,"load Environ failed Environ from base module");
+         event_err(1,"load Environ failed from base module");
     PyObject *pyenviron=PyObject_CallObject(pyenviron_class, NULL);
     if (!pyenviron)
-         event_err(1,"Fail to create an instance of Environ");
+         event_err(1,"Failed to create an instance of Environ");
     Py_DECREF(pyenviron_class);
     //  2)transform headers into adictionary and send it to environ.update_headers
     pydict=py_build_environ(req->input_headers);
