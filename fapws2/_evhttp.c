@@ -526,8 +526,6 @@ python_handler( struct evhttp_request *req, void *arg)
 #ifdef DEBUG
     printf("passheader \n");
 #endif
-    //TODO: build a apache like log file
-    //printf("Request from %s:%i\n", req->remote_host, req->remote_port);
     //get start_response data
     PyObject *pystatus_code=PyObject_GetAttrString(pystart_response,"status_code");
     int status_code;
