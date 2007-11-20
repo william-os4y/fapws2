@@ -414,7 +414,7 @@ signal_cb(int fd, short event, void *arg)
 {
         struct event *signal = arg;
         printf("got signal %d\n", EVENT_SIGNAL(signal));
-        //TODO: call end callback
+        //TODO: call callback
         event_del(signal);
         evhttp_free(http_server);
 }
@@ -548,7 +548,7 @@ python_handler( struct evhttp_request *req, void *arg)
 #ifdef DEBUG
     printf("send status code and status reasons\n");
 #endif
-    if (strcmp(PyString_AsString(PyDict_GetItemString(pyenviron,"REQUEST_METHOD")),"HEAD")==0) {
+    if (req->type==EVHTTP_REQ_HEAD) {
 #ifdef DEBUG
         printf("Method HEAD requested. No content send\n");
 #endif        
