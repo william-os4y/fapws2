@@ -548,39 +548,45 @@ python_handler( struct evhttp_request *req, void *arg)
 #ifdef DEBUG
     printf("send status code and status reasons\n");
 #endif
-    if (PyList_Check(pyresult)) {
+    if (strcmp(PyString_AsString(PyDict_GetItemString(pyenviron,"REQUEST_METHOD")),"HEAD")==0) {
 #ifdef DEBUG
-        printf("wsgi output is a list\n");
-#endif
-        for (index=0; index<PyList_Size(pyresult); index++) {
-            char *buff;
-            int buflen;
-            PyObject_AsReadBuffer(PyList_GetItem(pyresult, index), (const void **) &buff, &buflen);
-            //printf("SIZEOF:%i=%i,%i\n", index, strlen(buff), buflen);
-            evbuffer_add(evb, buff, buflen);    
-            evhttp_send_reply_chunk(req, evb);
-        }
+        printf("Method HEAD requested. No content send\n");
+#endif        
         evhttp_send_reply_end(req);
-    } else if (PyFile_Check(pyresult)) {
+    } else { 
+        if (PyList_Check(pyresult)) {
 #ifdef DEBUG
-        printf("wsgi output is a file\n");
+            printf("wsgi output is a list\n");
 #endif
-        char buff[32768]="";  //this is the chunk size
-        int bytes=0;
-        FILE *file=PyFile_AsFile(pyresult);
-        while ((bytes=fread(buff, 1, sizeof(buff), file))) {
-             //printf("FILE:%i \n",bytes);
-             evbuffer_add(evb, buff, bytes);    
-             evhttp_send_reply_chunk(req, evb);
-             buff[0]='\0';
+            for (index=0; index<PyList_Size(pyresult); index++) {
+                char *buff;
+                int buflen;
+                PyObject_AsReadBuffer(PyList_GetItem(pyresult, index), (const void **) &buff, &buflen);
+                //printf("SIZEOF:%i=%i,%i\n", index, strlen(buff), buflen);
+                evbuffer_add(evb, buff, buflen);    
+                evhttp_send_reply_chunk(req, evb);
+            }
+            evhttp_send_reply_end(req);
+        } else if (PyFile_Check(pyresult)) {
+#ifdef DEBUG
+            printf("wsgi output is a file\n");
+#endif
+            char buff[32768]="";  //this is the chunk size
+            int bytes=0;
+            FILE *file=PyFile_AsFile(pyresult);
+            while ((bytes=fread(buff, 1, sizeof(buff), file))) {
+                //printf("FILE:%i \n",bytes);
+                evbuffer_add(evb, buff, bytes);    
+                evhttp_send_reply_chunk(req, evb);
+                buff[0]='\0';
+            }
+            evhttp_send_reply_end(req);
+        } else {
+            printf("wsgi output of %s is neither a list neither a fileobject\n",PyString_AsString(PyObject_Repr(params->pycbobj)));
+            //PyErr_SetString(PyExc_TypeError, "Result must be a list or a fileobject");
+            return ;
         }
-        evhttp_send_reply_end(req);
-    } else {
-        printf("wsgi output of %s is neither a list neither a fileobject\n",PyString_AsString(PyObject_Repr(params->pycbobj)));
-        //PyErr_SetString(PyExc_TypeError, "Result must be a list or a fileobject");
-        return ;
     }
-
     Py_DECREF(pyresult);
     
     evbuffer_free(evb);    
