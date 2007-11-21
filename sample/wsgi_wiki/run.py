@@ -10,7 +10,6 @@ sys.setcheckinterval=100000 # since we don't use threads, internal checks are no
 
 import views
 
-
 def start():
     evhttp.start("0.0.0.0", 8080)
     
@@ -25,6 +24,7 @@ def start():
     def display(environ, start_response):
         return views.display(environ, start_response)
     def edit(environ, start_response):
+	#print environ['fapws.params']
         r=views.Edit()
         return r(environ, start_response)
     def favicon(environ, start_response):

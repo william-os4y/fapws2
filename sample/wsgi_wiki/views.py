@@ -35,8 +35,9 @@ class Edit:
         self.start_response = start_response
         self.environ = environ
         if environ['REQUEST_METHOD'] == "POST":
-            page = environ['fapws.params'].get('page', [''])[0]
-            content = environ['fapws.params'].get('content', [''])[0]
+            params=environ['fapws.params']
+            page = params.get('page', [''])[0]
+            content = params.get('content', [''])[0]
             return self.POST(page,content)
         else:
             page = environ['fapws.params'].get('page', [''])[0]

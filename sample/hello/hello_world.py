@@ -46,7 +46,7 @@ def start():
         except:
             f=["Page not found"]
         return f
-    
+        
     def staticshort(environ, start_response):
         f=open("short.txt", "rb")
         return f

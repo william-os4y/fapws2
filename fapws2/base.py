@@ -68,7 +68,7 @@ status_reasons = {
 class Environ(dict):
     def __init__(self, *arg, **kw):
         self['wsgi.version'] = (1,0)
-        #self['wgsi.errors'] = log.error_logfid
+        self['wsgi.errors'] = StringIO.StringIO()
         self['wsgi.input'] = StringIO.StringIO()
         self['wsgi.multithread'] = False
         self['wsgi.multiprocess'] = True
