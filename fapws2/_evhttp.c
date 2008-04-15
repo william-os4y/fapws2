@@ -750,8 +750,7 @@ static PyMethodDef EvhttpMethods[] = {
     {"encode_uri",py_evhttp_encode_uri, METH_VARARGS, "encode the uri"},
     {"decode_uri",py_decode_uri, METH_VARARGS, "decode the uri"},
     {"parse_query", py_parse_query, METH_VARARGS, "parse query into dictionary"},
-    {"version", py_version, METH_VARARGS, "return the version of the shared object"},
-
+    {"version", py_version, METH_VARARGS, "return the version of the shared object"}, 
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
