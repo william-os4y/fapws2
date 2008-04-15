@@ -32,7 +32,7 @@ setup (name = "fapws2",
            # Here I'm pointing to the direcoty where libevent has been build
            # In this directory wi can find sources and compiled objects (as after a "./configure; make")
 	       include_dirs=[libevent_src],
-	       library_dirs=["/usr/local/lib"],
+	       library_dirs=["/usr/local/lib"], # add LD_RUN_PATH in your environment
 	       libraries=['event'],
            #extra_compile_args=["-march=athlon-xp", "-mtune=athlon-xp", "-ggdb"],
            #define_macros=[("DEBUG", "1")],

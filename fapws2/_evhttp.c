@@ -730,6 +730,13 @@ py_decode_uri(PyObject *self, PyObject *args)
     return pyres;
 }
 
+static PyObject *
+py_version(PyObject *self, PyObject *args)
+{
+    PyObject *pyres=Py_BuildValue("s", "2.0.3");
+    return pyres;
+}
+
 static PyMethodDef EvhttpMethods[] = {
     {"htmlescape", py_htmlescape, METH_VARARGS, "html escape"}, 
     {"start", py_evhttp_start, METH_VARARGS, "Start evhttp"},
@@ -743,6 +750,7 @@ static PyMethodDef EvhttpMethods[] = {
     {"encode_uri",py_evhttp_encode_uri, METH_VARARGS, "encode the uri"},
     {"decode_uri",py_decode_uri, METH_VARARGS, "decode the uri"},
     {"parse_query", py_parse_query, METH_VARARGS, "parse query into dictionary"},
+    {"version", py_version, METH_VARARGS, "return the version of the shared object"},
 
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
