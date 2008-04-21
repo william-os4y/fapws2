@@ -9,7 +9,7 @@ import sys
 if os.environ.has_key('LIBEVENT_SRC'):
         libevent_src = os.environ['LIBEVENT_SRC']
 else:
-        libevent_src = '/var/abs/local/libevent/src/libevent-1.3e'
+        libevent_src = './libevent'
 
 if not os.path.exists('/usr/lib/libevent.so'):
     print "We don't find libevent installed!!!!"
