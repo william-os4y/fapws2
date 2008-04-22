@@ -168,7 +168,8 @@ parse_query(char * uri)
         if (value==NULL) {
             value="";
         }
-        //value=evhttp_decode_uri(value);
+        value=decode_uri(value);
+        key=decode_uri(key);
         if ((pyelem=PyDict_GetItemString(pydict, key))==NULL) {
             pyelem=PyList_New(0);
         } else {
@@ -234,7 +235,7 @@ PyObject *
 py_build_uri_variables(struct evhttp_request *req, char *url_path)
 {
     PyObject* pydict = PyDict_New();
-    char *uri, *rst_uri, *path_info, *query_string;
+    char *rst_uri, *path_info, *query_string;
     int len=0;
     PyObject *pydummy=NULL;
 
@@ -249,12 +250,10 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
     PyDict_SetItemString(pydict, "fapws.uri", pydummy);
     Py_DECREF(pydummy);
     
-    //decode the uri
-    uri=decode_uri(req->uri);
     // Clean up the uri 
-    len=strlen(uri)-strlen(url_path)+1;
+    len=strlen(req->uri)-strlen(url_path)+1;
     rst_uri = calloc(len, sizeof(char));
-    strncpy(rst_uri, uri + strlen(url_path), len);
+    strncpy(rst_uri, req->uri + strlen(url_path), len);
     pydummy=PyString_FromString(url_path);
     PyDict_SetItemString(pydict, "SCRIPT_NAME", pydummy);
     Py_DECREF(pydummy);
@@ -282,7 +281,6 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
         free(path_info);
     }
     free(rst_uri);
-    free(uri);
     return pydict;
 }
 
@@ -329,7 +327,7 @@ py_build_method_variables(PyObject *pyenvdict, struct evhttp_request *req)
                     buff=malloc(EVBUFFER_LENGTH(req->input_buffer)+1);
                     strncpy(buff,(char *)EVBUFFER_DATA(req->input_buffer), EVBUFFER_LENGTH(req->input_buffer));
                     buff[EVBUFFER_LENGTH(req->input_buffer)]='\0';
-                    buff=decode_uri(buff);
+                    //buff=decode_uri(buff);
                     pydummy=parse_query(buff);
                     free(buff);
                     PyDict_SetItemString(pydict,"fapws.params",pydummy);
