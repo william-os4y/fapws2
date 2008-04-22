@@ -259,7 +259,7 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
     Py_DECREF(pydummy);
 
     if (strchr(rst_uri, '?') == NULL) {
-        pydummy=PyString_FromString(rst_uri);
+        pydummy=PyString_FromString(decode_uri(rst_uri));
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
         Py_DECREF(pydummy);
         pydummy=PyString_FromString("");
@@ -269,7 +269,7 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
     else {
         query_string=strdup(rst_uri);
         path_info=strsep(&query_string,"?");
-        pydummy=PyString_FromString(path_info);
+        pydummy=PyString_FromString(decode_uri(path_info));
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
         Py_DECREF(pydummy);
         pydummy=PyString_FromString(query_string);        
