@@ -175,9 +175,14 @@ parse_query(char * uri)
         } else {
             Py_INCREF(pyelem); // because of GetItem 
         }
+	free(key);
         if (!PyList_Check(pyelem))
+        {
+            free(value);
             return NULL;
+        }
         pydummy=PyString_FromString(value);
+        free(value);
         PyList_Append(pyelem, pydummy);
         Py_DECREF(pydummy);
         PyDict_SetItemString(pydict, key, pyelem);
@@ -259,7 +264,9 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
     Py_DECREF(pydummy);
 
     if (strchr(rst_uri, '?') == NULL) {
-        pydummy=PyString_FromString(decode_uri(rst_uri));
+        char *s = decode_uri(rst_uri);
+        pydummy=PyString_FromString(s);
+        free(s);
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
         Py_DECREF(pydummy);
         pydummy=PyString_FromString("");
@@ -269,7 +276,9 @@ py_build_uri_variables(struct evhttp_request *req, char *url_path)
     else {
         query_string=strdup(rst_uri);
         path_info=strsep(&query_string,"?");
-        pydummy=PyString_FromString(decode_uri(path_info));
+        char *s = decode_uri(path_info);
+        pydummy=PyString_FromString(s);
+        free(s);
         PyDict_SetItemString(pydict, "PATH_INFO", pydummy);
         Py_DECREF(pydummy);
         pydummy=PyString_FromString(query_string);        
